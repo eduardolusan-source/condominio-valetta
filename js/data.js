@@ -3,7 +3,10 @@
    (Google Sheets). Esta copia sirve de respaldo: si js/finanzas.js tiene
    configurada la URL de la hoja publicada, los meses se leen de ahí en cada
    carga y lo de este archivo solo se usa cuando la hoja no responde.
-   La morosidad se publica SIEMPRE agregada (sin identificar unidades). */
+   La morosidad se publica SIEMPRE agregada (sin identificar unidades).
+   "mora" es el saldo acumulado del año por unidad (pagado menos cuotas
+   transcurridas): acumulada = suma de saldos en contra; adelantos = suma de
+   saldos a favor de quienes pagaron meses por adelantado. */
 const VALETTA = {
   unidades: 32,
   composicion: "27 departamentos (A 01 a A 37) y 5 penthouses (PH 41 a PH 45)",
@@ -17,6 +20,7 @@ const VALETTA = {
       ingresos: { manto: 35200, agua: 0, casaClub: 0 },
       egresos: { fijos: 24978.22, variables: 12024.04 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -39,6 +43,7 @@ const VALETTA = {
       ingresos: { manto: 35200, agua: 0, casaClub: 0 },
       egresos: { fijos: 24984.72, variables: 13858 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -60,6 +65,7 @@ const VALETTA = {
       ingresos: { manto: 35200, agua: 0, casaClub: 0 },
       egresos: { fijos: 24978.22, variables: 10820 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -80,6 +86,7 @@ const VALETTA = {
       ingresos: { manto: 35200, agua: 0, casaClub: 0 },
       egresos: { fijos: 24991.22, variables: 12989 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -101,6 +108,7 @@ const VALETTA = {
       ingresos: { manto: 35200, agua: 0, casaClub: 0 },
       egresos: { fijos: 24978.22, variables: 4871.53 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -122,6 +130,7 @@ const VALETTA = {
       ingresos: { manto: 41800, agua: 0, casaClub: 0 },
       egresos: { fijos: 24978.22, variables: 7260 },
       cobranza: { pagaron: 32, pct: 100, morosos: 0 },
+      mora: { acumulada: 0, unidades: 0, adelantos: 6600, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -142,6 +151,7 @@ const VALETTA = {
       ingresos: { manto: 34100, agua: 0, casaClub: 500 },
       egresos: { fijos: 24978.22, variables: 6500 },
       cobranza: { pagaron: 29, pct: 90.6, morosos: 3 },
+      mora: { acumulada: 1100, unidades: 1, adelantos: 6600, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],
@@ -160,6 +170,7 @@ const VALETTA = {
       ingresos: { manto: 30800, agua: 0, casaClub: 0 },
       egresos: { fijos: 24978.22, variables: 18101 },
       cobranza: { pagaron: 28, pct: 87.5, morosos: 4 },
+      mora: { acumulada: 3300, unidades: 2, adelantos: 4400, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
           ["Servicios de asistencia administrativa", 23973.72],

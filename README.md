@@ -13,9 +13,23 @@ métricas cambien solas cuando la Administración mueve la hoja:
 1. **Crear en la hoja una pestaña `Resumen`** con una fila por mes y estos
    encabezados (el orden no importa):
 
-   | Mes ID | Mes | Corto | Saldo inicial | Saldo final | Mantenimiento cobrado | Agua cobrada | Casa club cobrada | Gastos fijos | Gastos variables | Unidades que pagaron | % cobranza | Unidades morosas |
-   |---|---|---|---|---|---|---|---|---|---|---|---|---|
-   | 2026-08 | Agosto | Ago | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… |
+   | Mes ID | Mes | Corto | Saldo inicial | Saldo final | Mantenimiento cobrado | Agua cobrada | Casa club cobrada | Gastos fijos | Gastos variables | Unidades que pagaron | % cobranza | Unidades morosas | Mora acumulada | Unidades con mora | Pagos adelantados | Unidades adelantadas |
+   |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+   | 2026-08 | Agosto | Ago | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… |
+
+   Las cuatro últimas columnas son opcionales y salen de una pestaña auxiliar
+   `Saldos` (que **no se publica**): una fila por departamento, una columna
+   por mes con lo que pagó ese mes (buscado en la pestaña del mes), y para
+   cada mes el saldo acumulado = pagado acumulado − meses transcurridos ×
+   cuota. Entonces, para el mes N:
+
+   - Mora acumulada = `-SUMIF(saldos_N; "<0")`
+   - Unidades con mora = `COUNTIF(saldos_N; "<0")`
+   - Pagos adelantados = `SUMIF(saldos_N; ">0")`
+   - Unidades adelantadas = `COUNTIF(saldos_N; ">0")`
+
+   Así, quien paga varios meses por adelantado no cuenta como moroso en los
+   meses siguientes, y quien debe suma todo lo pendiente del año.
 
    Cada celda puede ser una fórmula que busque el dato en la pestaña del mes
    por su etiqueta, así no importa si las filas se mueven. Por ejemplo, para

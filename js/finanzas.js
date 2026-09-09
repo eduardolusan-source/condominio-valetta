@@ -46,7 +46,9 @@
         Mes ID | Mes | Corto | Saldo inicial | Saldo final |
         Mantenimiento cobrado | Agua cobrada | Casa club cobrada |
         Gastos fijos | Gastos variables | Unidades que pagaron |
-        % cobranza | Unidades morosas
+        % cobranza | Unidades morosas | Mora acumulada | Unidades con mora |
+        Pagos adelantados | Unidades adelantadas
+        (las cuatro últimas son opcionales; ver README para calcularlas)
         "Mes ID" va como 2026-09. Cada celda puede ser una fórmula que apunte
         a la pestaña del mes, así la fila se llena sola.
 
@@ -173,11 +175,51 @@
     document.getElementById("egresosSub").textContent = m.nombre + " " + C.anio;
 
     const mo = m.cobranza.morosos;
-    const sinCobrar = Math.max(0, C.unidades - m.cobranza.pagaron) * C.cuota;
+    const mr = m.mora || {};
+    const has = v => typeof v === "number" && isFinite(v);
+    const plural = (n, s) => n + " unidad" + (n === 1 ? "" : "es") + s;
     document.getElementById("morosidadCards").innerHTML =
-      '<div class="stat"><div class="k">Unidades con adeudo de mantenimiento</div><div class="v">' + mo + ' <span style="font-size:0.9rem; font-weight:400; color:var(--muted)">de ' + C.unidades + "</span></div></div>" +
-      '<div class="stat"><div class="k">Cuotas no cobradas en el mes</div><div class="v">' + fmt(sinCobrar) + '</div><div class="d">' + (C.unidades - m.cobranza.pagaron) + " cuota(s) de " + fmt(C.cuota) + "</div></div>" +
-      '<div class="stat"><div class="k">Cobranza del mes</div><div class="v ' + (m.cobranza.pct >= 95 ? "pos" : "") + '">' + m.cobranza.pct.toFixed(1) + '%</div><div class="d">de las cuotas de mantenimiento</div></div>';
+      '<div class="stat"><div class="k">Mora acumulada al cierre de ' + esc(m.nombre.toLowerCase()) + '</div><div class="v ' + (has(mr.acumulada) && mr.acumulada > 0 ? "neg" : "") + '">' + (has(mr.acumulada) ? fmt(mr.acumulada) : "—") + '</div><div class="d">' + (has(mr.unidades) ? plural(mr.unidades, " con cuotas del año sin pagar") : "pendiente de calcular en la hoja") + "</div></div>" +
+      '<div class="stat"><div class="k">Pagos adelantados</div><div class="v ' + (has(mr.adelantos) && mr.adelantos > 0 ? "pos" : "") + '">' + (has(mr.adelantos) ? fmt(mr.adelantos) : "—") + '</div><div class="d">' + (has(mr.unidadesAdelanto) ? plural(mr.unidadesAdelanto, " con meses ya cubiertos") : "pendiente de calcular en la hoja") + "</div></div>" +
+      '<div class="stat"><div class="k">Unidades sin pago registrado en el mes</div><div class="v">' + mo + ' <span style="font-size:0.9rem; font-weight:400; color:var(--muted)">de ' + C.unidades + '</span></div><div class="d">incluye a quienes ya habían pagado por adelantado</div></div>' +
+      '<div class="stat"><div class="k">Cobranza del mes</div><div class="v ' + (m.cobranza.pct >= 95 ? "pos" : "") + '">' + m.cobranza.pct.toFixed(1) + '%</div><div class="d">' + (C.unidades - m.cobranza.pagaron) + " cuota(s) de " + fmt(C.cuota) + " no entraron este mes</div></div>";
+    chartMora();
+  }
+
+  /* ---------- Gráfica: mora acumulada y adelantos por mes ---------- */
+  function chartMora() {
+    const box = document.getElementById("chartMora");
+    if (!box) return;
+    const rows = M.map(m => [m, (m.mora || {}).acumulada, (m.mora || {}).adelantos]);
+    if (!rows.some(r => typeof r[1] === "number" || typeof r[2] === "number")) { box.innerHTML = ""; return; }
+    const W = 760, H = 220, L = 56, R = 8, T = 14, B = 30;
+    const pw = W - L - R, ph = H - T - B;
+    const maxV = nice(Math.max(1000, ...rows.map(r => Math.max(r[1] || 0, r[2] || 0))) * 1.1);
+    const step = maxV / 4;
+    const y = v => T + ph - (v / maxV) * ph;
+    let g = "";
+    for (let t = 0; t <= maxV + 1; t += step) {
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--grid)" stroke-width="1"/>' +
+        '<text x="' + (L - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + (t === 0 ? "0" : kfmt(t)) + "</text>";
+    }
+    const gw = pw / M.length, bw = Math.min(24, gw / 2 - 6);
+    let bars = "", hits = "";
+    rows.forEach(([m, mora, adel], i) => {
+      const cx = L + gw * i + gw / 2;
+      const bar = (x, v, color) => { const yy = y(v || 0); return '<rect x="' + x + '" y="' + yy + '" width="' + bw + '" height="' + Math.max(0, T + ph - yy) + '" rx="3" fill="' + color + '"/>'; };
+      bars += bar(cx - bw - 1, mora, "var(--series-2)") + bar(cx + 1, adel, "var(--series-1)");
+      bars += '<text x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">' + esc(m.corto) + "</text>";
+      hits += '<rect data-i="' + i + '" x="' + (L + gw * i) + '" y="' + T + '" width="' + gw + '" height="' + ph + '" fill="transparent"/>';
+    });
+    box.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Mora acumulada y pagos adelantados al cierre de cada mes">' + g +
+      '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--baseline)" stroke-width="1.5"/>' + bars + hits + "</svg>";
+    box.querySelectorAll("rect[data-i]").forEach(rect => {
+      rect.addEventListener("mousemove", e => {
+        const [m, mora, adel] = rows[+rect.dataset.i];
+        showTip("<b>Cierre de " + esc(m.nombre.toLowerCase()) + "</b><br>Mora acumulada: <b>" + (typeof mora === "number" ? fmt(mora) : "—") + "</b><br>Pagos adelantados: <b>" + (typeof adel === "number" ? fmt(adel) : "—") + "</b>", e.clientX, e.clientY);
+      });
+      rect.addEventListener("mouseleave", hideTip);
+    });
   }
 
   /* ---------- Gráfica: barras ingresos vs egresos ---------- */
@@ -359,7 +401,8 @@
     saldoinicial: "saldoIni", saldofinal: "saldoFin",
     mantenimientocobrado: "manto", aguacobrada: "agua", casaclubcobrada: "casaClub", rentacasaclub: "casaClub",
     gastosfijos: "fijos", egresosfijos: "fijos", gastosvariables: "variables", egresosvariables: "variables",
-    unidadesquepagaron: "pagaron", "%cobranza": "pct", cobranza: "pct", unidadesmorosas: "morosos", morosos: "morosos"
+    unidadesquepagaron: "pagaron", "%cobranza": "pct", cobranza: "pct", unidadesmorosas: "morosos", morosos: "morosos",
+    moraacumulada: "moraAcum", unidadesconmora: "moraUnidades", pagosadelantados: "adelantos", unidadesadelantadas: "adelUnidades"
   };
   const COLS_DET = { mesid: "id", tipo: "tipo", concepto: "concepto", proveedor: "concepto", monto: "monto", comprobante: "liga", liga: "liga" };
 
@@ -421,6 +464,13 @@
         .some(k => k in o && String(o[k]).replace(/[^0-9]/g, "") !== ""));
   }
 
+  /* Las columnas de mora son opcionales: si la hoja no las trae, las
+     tarjetas muestran "—" en vez de un cero engañoso. */
+  function opcional(o, kAcum, kUni, kAdel, kUniAdel) {
+    const val = k => (k in o && String(o[k]).trim() !== "") ? Math.abs(num(o[k])) : null;
+    return { acumulada: val(kAcum), unidades: val(kUni), adelantos: val(kAdel), unidadesAdelanto: val(kUniAdel) };
+  }
+
   const NOMBRES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
   async function cargarHoja() {
@@ -461,6 +511,7 @@
         ingresos: { manto: num(o.manto), agua: num(o.agua), casaClub: num(o.casaClub) },
         egresos: { fijos: Math.abs(num(o.fijos)), variables: Math.abs(num(o.variables)) },
         cobranza: { pagaron: num(o.pagaron), pct: num(o.pct), morosos: num(o.morosos) },
+        mora: opcional(o, "moraAcum", "moraUnidades", "adelantos", "adelUnidades"),
         detalle: (detalle && detalle[id]) || (antes && antes.detalle) || { fijos: [], variables: [] }
       };
     }).sort((a, b) => a.id.localeCompare(b.id));
