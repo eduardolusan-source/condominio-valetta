@@ -108,7 +108,7 @@
       b.type = "button";
       b.textContent = m.nombre;
       b.className = i === mesIdx ? "on" : "";
-      b.addEventListener("click", () => { mesIdx = i; renderMes(); renderChips(); });
+      b.addEventListener("click", () => { mesIdx = i; renderMes(); renderChips(); setText("tituloMes", "Detalle de " + mesMin(m) + " " + C.anio); if (history.replaceState) history.replaceState(null, "", "#mes-" + m.id); });
       box.appendChild(b);
     });
   }
@@ -183,8 +183,88 @@
       '<div class="stat"><div class="k">Pagos adelantados</div><div class="v ' + (has(mr.adelantos) && mr.adelantos > 0 ? "pos" : "") + '">' + (has(mr.adelantos) ? fmt(mr.adelantos) : "—") + '</div><div class="d">' + (has(mr.unidadesAdelanto) ? plural(mr.unidadesAdelanto, " con meses ya cubiertos") : "pendiente de calcular en la hoja") + "</div></div>" +
       '<div class="stat"><div class="k">Unidades sin pago registrado en el mes</div><div class="v">' + mo + ' <span style="font-size:0.9rem; font-weight:400; color:var(--muted)">de ' + C.unidades + '</span></div><div class="d">incluye a quienes ya habían pagado por adelantado</div></div>' +
       '<div class="stat"><div class="k">Cobranza del mes</div><div class="v ' + (m.cobranza.pct >= 95 ? "pos" : "") + '">' + m.cobranza.pct.toFixed(1) + '%</div><div class="d">' + (C.unidades - m.cobranza.pagaron) + " cuota(s) de " + fmt(C.cuota) + " no entraron este mes</div></div>";
-    chartMora();
   }
+
+  /* ---------- Vista general del año ---------- */
+  const NOMBRES_MIN = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const mesMin = m => (m.nombre || "").toLowerCase();
+
+  function renderOverview() {
+    const box = document.getElementById("overviewCards");
+    if (!M.length) { box.innerHTML = "<div class='stat'><div class='k'>Sin meses capturados</div></div>"; return; }
+    const first = M[0], last = M[M.length - 1];
+    const ingAcum = sum(M.map(ingresosDe)), egrAcum = sum(M.map(egresosDe));
+    const resAcum = ingAcum - egrAcum;
+    const gastoProm = egrAcum / M.length;
+    const fijosProm = prom(M.map(m => m.egresos.fijos));
+    const diasReserva = gastoProm > 0 ? Math.max(0, last.saldoFin) / (gastoProm / 30) : 0;
+    const reservaTxt = diasReserva >= 60 ? (diasReserva / 30).toFixed(1) + " meses" : Math.round(diasReserva) + " días";
+    const teoricoAnual = C.cuota * C.unidades * M.length;
+    const mr = last.mora || {};
+    const hasMora = typeof mr.acumulada === "number";
+    const cobradoReal = hasMora ? teoricoAnual - mr.acumulada : sum(M.map(m => m.ingresos.manto));
+    const pctReal = teoricoAnual ? cobradoReal / teoricoAnual * 100 : 0;
+    const porUnidad = gastoProm / C.unidades;
+    const brecha = C.cuota - porUnidad;
+    const positivos = M.filter(m => resultadoDe(m) >= 0);
+
+    box.innerHTML =
+      '<div class="stat"><div class="k">Saldo en caja</div><div class="v ' + (last.saldoFin >= 0 ? "pos" : "neg") + '">' + fmt2(last.saldoFin) + '</div><div class="d">al cierre de ' + esc(mesMin(last)) + " · el año inició en " + fmt2(first.saldoIni) + "</div></div>" +
+      '<div class="stat"><div class="k">Resultado acumulado ' + C.anio + '</div><div class="v ' + (resAcum >= 0 ? "pos" : "neg") + '">' + fmt2(resAcum) + '</div><div class="d">ingresos ' + fmt(ingAcum) + " − egresos " + fmt(egrAcum) + "</div></div>" +
+      '<div class="stat"><div class="k">Reserva operativa</div><div class="v ' + (diasReserva < 30 ? "neg" : "") + '">' + reservaTxt + '</div><div class="d">lo que el saldo cubre del gasto mensual promedio (' + fmt(gastoProm) + ")</div></div>" +
+      '<div class="stat"><div class="k">Mora acumulada</div><div class="v ' + (hasMora && mr.acumulada > 0 ? "neg" : "") + '">' + (hasMora ? fmt(mr.acumulada) : "—") + '</div><div class="d">' + (hasMora ? mr.unidades + " unidad(es) con cuotas pendientes · adelantos: " + fmt(mr.adelantos || 0) + " (" + (mr.unidadesAdelanto || 0) + ")" : "pendiente de calcular en la hoja") + "</div></div>" +
+      '<div class="stat"><div class="k">Cuotas del año cobradas</div><div class="v ' + (pctReal >= 95 ? "pos" : "") + '">' + pctReal.toFixed(1) + '%</div><div class="d">' + fmt(cobradoReal) + " de " + fmt(teoricoAnual) + (hasMora ? "; lo que falta es la mora" : "") + "</div></div>" +
+      '<div class="stat"><div class="k">Costo de operar por unidad</div><div class="v">' + fmt(porUnidad) + '</div><div class="d">al mes, frente a la cuota de ' + fmt(C.cuota) + ": " + (brecha >= 0 ? "sobran " + fmt(brecha) : "faltan " + fmt(-brecha)) + " por unidad</div></div>" +
+      '<div class="stat"><div class="k">Meses con resultado positivo</div><div class="v">' + positivos.length + ' <span style="font-size:0.9rem; font-weight:400; color:var(--muted)">de ' + M.length + '</span></div><div class="d">' + (positivos.length ? positivos.map(mesMin).join(", ") : "ninguno todavía") + "</div></div>" +
+      '<div class="stat"><div class="k">Gasto mensual promedio</div><div class="v">' + fmt(gastoProm) + '</div><div class="d">fijos ' + fmt(fijosProm) + " (" + Math.round(fijosProm / gastoProm * 100) + "%) + variables " + fmt(gastoProm - fijosProm) + "</div></div>";
+  }
+
+  function renderAnual() {
+    const t = document.getElementById("tAnual");
+    let rows = "<thead><tr><th>Mes</th><th class='num'>Ingresos</th><th class='num'>Egresos</th><th class='num'>Resultado</th><th class='num'>Saldo al cierre</th><th class='num'>Cobranza</th><th class='num'>Mora acum.</th><th></th></tr></thead><tbody>";
+    M.forEach((m, i) => {
+      const res = resultadoDe(m), mr = m.mora || {};
+      rows += "<tr class='click' data-i='" + i + "'><td style='font-weight:600; color:var(--ink)'>" + esc(m.nombre) + "</td>" +
+        "<td class='num'>" + fmt(ingresosDe(m)) + "</td><td class='num'>" + fmt(egresosDe(m)) + "</td>" +
+        "<td class='num' style='color:var(--" + (res >= 0 ? "good" : "bad") + "-text); font-weight:600'>" + fmt(res) + "</td>" +
+        "<td class='num'>" + fmt(m.saldoFin) + "</td><td class='num'>" + m.cobranza.pct.toFixed(0) + "%</td>" +
+        "<td class='num'>" + (typeof mr.acumulada === "number" ? fmt(mr.acumulada) : "—") + "</td><td class='go'>ver ›</td></tr>";
+    });
+    const ing = sum(M.map(ingresosDe)), egr = sum(M.map(egresosDe));
+    rows += "<tr class='total'><td>Acumulado " + C.anio + "</td><td class='num'>" + fmt(ing) + "</td><td class='num'>" + fmt(egr) + "</td><td class='num'>" + fmt(ing - egr) + "</td><td class='num'></td><td class='num'></td><td class='num'></td><td></td></tr>";
+    t.innerHTML = rows + "</tbody>";
+    t.querySelectorAll("tr.click").forEach(tr => tr.addEventListener("click", () => abrirMes(+tr.dataset.i)));
+  }
+
+  function renderMoraCards() {
+    const last = M[M.length - 1];
+    const mr = (last && last.mora) || {};
+    const has = v => typeof v === "number";
+    document.getElementById("moraCards").innerHTML =
+      '<div class="stat"><div class="k">Mora acumulada al cierre de ' + (last ? esc(mesMin(last)) : "") + '</div><div class="v ' + (has(mr.acumulada) && mr.acumulada > 0 ? "neg" : "") + '">' + (has(mr.acumulada) ? fmt(mr.acumulada) : "—") + '</div><div class="d">' + (has(mr.unidades) ? mr.unidades + " unidad(es) con cuotas del año sin pagar" : "pendiente de calcular en la hoja") + "</div></div>" +
+      '<div class="stat"><div class="k">Pagos adelantados</div><div class="v ' + (has(mr.adelantos) && mr.adelantos > 0 ? "pos" : "") + '">' + (has(mr.adelantos) ? fmt(mr.adelantos) : "—") + '</div><div class="d">' + (has(mr.unidadesAdelanto) ? mr.unidadesAdelanto + " unidad(es) con meses ya cubiertos" : "pendiente de calcular en la hoja") + "</div></div>" +
+      '<div class="stat"><div class="k">Sin pago registrado en el último mes</div><div class="v">' + (last ? last.cobranza.morosos : "—") + ' <span style="font-size:0.9rem; font-weight:400; color:var(--muted)">de ' + C.unidades + '</span></div><div class="d">incluye a quienes ya habían pagado por adelantado</div></div>';
+  }
+
+  /* ---------- Navegación general ↔ detalle ---------- */
+  const secResumen = document.getElementById("resumen");
+  const secDetalle = document.getElementById("detalle");
+  function abrirMes(i) {
+    mesIdx = i;
+    renderChips(); renderMes();
+    secResumen.hidden = true; secDetalle.hidden = false;
+    setText("tituloMes", "Detalle de " + mesMin(M[i]) + " " + C.anio);
+    if (history.replaceState) history.replaceState(null, "", "#mes-" + M[i].id);
+    window.scrollTo(0, 0);
+  }
+  function volver(e) {
+    if (e) e.preventDefault();
+    secDetalle.hidden = true; secResumen.hidden = false;
+    if (history.replaceState) history.replaceState(null, "", location.pathname);
+    window.scrollTo(0, 0);
+  }
+  document.getElementById("volver").addEventListener("click", volver);
+  document.getElementById("volver2").addEventListener("click", volver);
 
   /* ---------- Gráfica: mora acumulada y adelantos por mes ---------- */
   function chartMora() {
@@ -310,23 +390,6 @@
   }
 
   /* ---------- Métricas del año ---------- */
-  function renderFijas() {
-    const fijosProm = prom(M.map(m => m.egresos.fijos));
-    const varProm = prom(M.map(m => m.egresos.variables));
-    const opProm = fijosProm + varProm;
-    const teorico = C.cuota * C.unidades;
-    const cobrado = sum(M.map(m => m.ingresos.manto));
-    const cobranzaAcum = M.length ? cobrado / (teorico * M.length) * 100 : 0;
-    const porUnidad = opProm / C.unidades;
-    document.getElementById("fixedCards").innerHTML =
-      '<div class="stat"><div class="k">Unidades</div><div class="v">' + C.unidades + '</div><div class="d">' + esc(C.composicion) + "</div></div>" +
-      '<div class="stat"><div class="k">Cuota de mantenimiento</div><div class="v">' + fmt(C.cuota) + '</div><div class="d">mensual por unidad · ingreso teórico ' + fmt(teorico) + "</div></div>" +
-      '<div class="stat"><div class="k">Gasto mensual promedio</div><div class="v">' + fmt(opProm) + '</div><div class="d">fijos ' + fmt(fijosProm) + " + variables " + fmt(varProm) + "</div></div>" +
-      '<div class="stat"><div class="k">Lo que cuesta operar por unidad</div><div class="v">' + fmt(porUnidad) + '</div><div class="d">al mes, frente a una cuota de ' + fmt(C.cuota) + "</div></div>" +
-      '<div class="stat"><div class="k">Cobranza acumulada ' + C.anio + '</div><div class="v">' + cobranzaAcum.toFixed(1) + '%</div><div class="d">' + fmt(cobrado) + " cobrados de " + fmt(teorico * M.length) + " teóricos</div></div>" +
-      '<div class="stat"><div class="k">Renta de la casa club</div><div class="v">' + fmt(C.rentaCasaClub) + '</div><div class="d">por evento · ' + fmt(sum(M.map(m => m.ingresos.casaClub))) + " cobrados en el año</div></div>";
-  }
-
   function hbars(boxId, items, aria, nota) {
     const total = sum(items.map(i => i[1]));
     const W = 560, rowH = 30, T = 6, L = 230, R = 84;
@@ -537,19 +600,24 @@
   function render() {
     if (rendered) return;
     rendered = true;
-    setText("rangoSub", "Cifras de la hoja de captura mensual de la Administración · " + rango() + ".");
-    setText("rangoPanorama", "Evolución de " + rango() + ".");
-    setText("anioPanorama", "Panorama " + C.anio);
-    setText("rangoFijas", "Promedios de " + rango() + ".");
+    setText("tituloGeneral", "Rendición de cuentas " + C.anio);
+    setText("rangoSub", "Vista general del año con cifras de la hoja de captura mensual de la Administración · " + rango() + " · " + C.unidades + " unidades · cuota de " + fmt(C.cuota) + " (ingreso teórico " + fmt(C.cuota * C.unidades) + " al mes).");
     renderFuente(live);
-    renderChips();
-    renderMes();
+    renderOverview();
+    renderAnual();
     chartBars();
     chartLine();
-    renderFijas();
+    renderMoraCards();
+    chartMora();
     chartFijos();
     chartVariables();
     renderProyectos();
+    renderChips();
+    renderMes();
+    /* Si la URL trae #mes-2026-08 se abre ese mes directamente. */
+    const h = /^#mes-(\d{4}-\d{2})$/.exec(location.hash);
+    const i = h ? M.findIndex(m => m.id === h[1]) : -1;
+    if (i >= 0) abrirMes(i);
   }
 
   cargarHoja().then(ok => {
