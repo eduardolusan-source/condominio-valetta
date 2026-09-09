@@ -228,7 +228,7 @@
         "<td class='num'>" + fmt(ingresosDe(m)) + "</td><td class='num'>" + fmt(egresosDe(m)) + "</td>" +
         "<td class='num' style='color:var(--" + (res >= 0 ? "good" : "bad") + "-text); font-weight:600'>" + fmt(res) + "</td>" +
         "<td class='num'>" + fmt(m.saldoFin) + "</td><td class='num'>" + m.cobranza.pct.toFixed(0) + "%</td>" +
-        "<td class='num'>" + (typeof mr.acumulada === "number" ? fmt(mr.acumulada) : "—") + "</td><td class='go'>ver ›</td></tr>";
+        "<td class='num'>" + (typeof mr.acumulada === "number" ? fmt(mr.acumulada) : "—") + "</td><td class='go'><span class='btn-mini'>Ver mes ›</span></td></tr>";
     });
     const ing = sum(M.map(ingresosDe)), egr = sum(M.map(egresosDe));
     rows += "<tr class='total'><td>Acumulado " + C.anio + "</td><td class='num'>" + fmt(ing) + "</td><td class='num'>" + fmt(egr) + "</td><td class='num'>" + fmt(ing - egr) + "</td><td class='num'></td><td class='num'></td><td class='num'></td><td></td></tr>";

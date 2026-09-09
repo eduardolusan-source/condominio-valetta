@@ -310,7 +310,9 @@ table.data td a:hover { text-decoration: underline; }
 /* Finanzas: vista general y detalle por mes */
 table.data tr.click { cursor: pointer; }
 table.data tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--ink); }
-table.data tr.click td.go { color: var(--accent); font-weight: 700; text-align: right; }
-a.back { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 0.92rem; }
-a.back:hover { text-decoration: underline; }
-.stat .v.neg, .stat .v.pos { }
+table.data tr.click td.go { text-align: right; white-space: nowrap; }
+.btn-mini { display: inline-block; background: var(--accent); color: #fff; border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em; }
+@media (prefers-color-scheme: dark) { .btn-mini { color: #0d0d0d; } }
+table.data tr.click:hover .btn-mini { background: var(--accent-strong); }
+.back-bar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 0; }
+.back-bar .hint { color: var(--muted); font-size: 0.88rem; }
