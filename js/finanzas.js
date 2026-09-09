@@ -137,7 +137,7 @@
 
     let ingRows = "<tr><td>Cuotas de mantenimiento</td><td class='num'>" + fmt2(m.ingresos.manto) + "</td></tr>";
     if (m.ingresos.agua) ingRows += "<tr><td>Cuota de agua de áreas comunes</td><td class='num'>" + fmt2(m.ingresos.agua) + "</td></tr>";
-    ingRows += "<tr><td>Renta de la casa club</td><td class='num'>" + fmt2(m.ingresos.casaClub) + "</td></tr>";
+    ingRows += "<tr><td>Casa club (limpieza y fondo de mantenimiento)</td><td class='num'>" + fmt2(m.ingresos.casaClub) + "</td></tr>";
     document.getElementById("tIngresos").innerHTML =
       "<thead><tr><th>Concepto</th><th class='num'>Monto</th></tr></thead><tbody>" + ingRows +
       "<tr class='total'><td>Total de ingresos</td><td class='num'>" + fmt2(ing) + "</td></tr></tbody>";

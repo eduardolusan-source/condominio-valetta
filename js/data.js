@@ -11,7 +11,6 @@ const VALETTA = {
   unidades: 32,
   composicion: "27 departamentos (A 01 a A 37) y 5 penthouses (PH 41 a PH 45)",
   cuota: 1100,
-  rentaCasaClub: 500,
   anio: 2026,
   meses: [
     {
