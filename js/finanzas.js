@@ -413,7 +413,12 @@
     if (hi === -1) throw new Error("falta la columna '" + requerida + "'");
     const cab = filas[hi].map(h => cols[norm(h)] || null);
     return filas.slice(hi + 1).map(f => { const o = {}; cab.forEach((k, i) => { if (k) o[k] = f[i]; }); return o; })
-      .filter(o => /^\d{4}-\d{2}$/.test(String(o.id || "").trim()));
+      .filter(o => /^\d{4}-\d{2}$/.test(String(o.id || "").trim()))
+      /* Filas preparadas para meses que aún no tienen pestaña (fórmulas con
+         IFERROR que devuelven vacío) se ignoran: así Resumen puede traer los
+         doce meses del año y el sitio muestra solo los que ya se capturaron. */
+      .filter(o => ["saldoIni", "saldoFin", "manto", "fijos", "variables", "monto"]
+        .some(k => k in o && String(o[k]).replace(/[^0-9]/g, "") !== ""));
   }
 
   const NOMBRES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];

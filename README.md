@@ -30,6 +30,18 @@ métricas cambien solas cuando la Administración mueve la hoja:
    (Si la hoja usa coma como separador de argumentos, cambiar `;` por `,`.
    Los egresos pueden ir negativos: el sitio toma el valor absoluto.)
 
+   **Para que un mes nuevo aparezca solo:** dejar en Resumen las doce filas
+   del año desde el principio, cada una apuntando a la pestaña que le
+   corresponde (`sep-26`, `oct-26`, …) y envolviendo cada fórmula en
+   `IFERROR(...; "")`. Mientras la pestaña no exista, la fila queda vacía y
+   el sitio la ignora; en cuanto la Administración duplica la plantilla con
+   ese nombre y la llena, la fila se completa y el mes aparece en la página.
+   La única condición es respetar el nombre de la pestaña.
+
+   ```
+   =IFERROR(INDEX('sep-26'!C:C; MATCH("SALDO FINAL DEL MES"; 'sep-26'!B:B; 0)); "")
+   ```
+
 2. **Opcional: una pestaña `Detalle`** con el desglose por concepto, una fila
    por gasto: `Mes ID | Tipo | Concepto | Monto | Comprobante` (Tipo es
    `fijo` o `variable`; Comprobante, la liga de Drive si la hay). Sin esta
