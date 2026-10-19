@@ -51,7 +51,7 @@
      REGLA: lo que entrega el script o lo publicado lo puede leer cualquiera
      que tenga la URL; la clave del sitio no lo protege. Por eso solo viajan
      agregados: nunca cobros por departamento. */
-  const API_URL = "";
+  const API_URL = "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec";
   const RESUMEN_URL = "";
   const DETALLE_URL = "";
 

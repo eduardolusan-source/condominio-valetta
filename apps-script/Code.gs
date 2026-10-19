@@ -1,5 +1,6 @@
 /* Condominio La Valetta · Finanzas en vivo
-   Apps Script ligado a la hoja "Valetta-Captura-Mensual" (Extensiones → Apps Script).
+   Apps Script que lee la hoja "Valetta-Captura-Mensual" (proyecto propio en
+   script.google.com, o ligado a la hoja desde Extensiones → Apps Script).
    Instalación paso a paso: apps-script/INSTALAR.md
 
    Qué hace:
@@ -18,6 +19,11 @@
    si no es fecha, del nombre de la pestaña. "Captura Mensual" es la plantilla
    y no cuenta. Una pestaña sin cobros ni gastos se considera vacía y no se
    publica, por eso se pueden dejar los meses del año creados por adelantado. */
+
+/* Id de la hoja. Con él, el script puede vivir en un proyecto propio de
+   script.google.com (no hace falta que esté ligado a la hoja). Si se pega
+   dentro de la hoja (Extensiones → Apps Script) también funciona. */
+const HOJA_ID = "1jHowL3TmE3W-jTENYDXbLREyYeSWndkQJXo5HnG3fPw";
 
 const MESES = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
 const NOMBRES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -43,6 +49,8 @@ function doGet(e) {
   }
 }
 
+function hoja_() { return HOJA_ID ? SpreadsheetApp.openById(HOJA_ID) : SpreadsheetApp.getActive(); }
+function aviso_(msg) { Logger.log(msg); try { hoja_().toast(msg, "La Valetta", 10); } catch (_) { /* sin hoja activa no hay aviso en pantalla */ } }
 function texto_(s) { return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON); }
 
 /* Para probar desde el editor: Ejecutar → probar, y ver el registro. */
@@ -55,7 +63,7 @@ function probar() {
 /* ============================ LECTURA ============================ */
 
 function armarFinanzas_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = hoja_();
   const hojas = hojasMes_(ss);
   if (!hojas.length) throw new Error("No encuentro pestañas de meses (ENERO, FEBRERO…).");
 
@@ -239,18 +247,52 @@ function ligasDrive_(h, fFijos, fVar) {
 /* Crea las pestañas que faltan hasta diciembre del año del último mes. */
 function instalar() {
   const creadas = crearMeses_(12);
-  SpreadsheetApp.getActive().toast(creadas.length ? "Pestañas creadas: " + creadas.join(", ") : "No faltaba ningún mes.", "La Valetta", 10);
-  Logger.log(creadas.length ? "Creadas: " + creadas.join(", ") : "No faltaba ningún mes.");
+  const afinadas = afinarVacios_();
+  aviso_((creadas.length ? "Pestañas creadas: " + creadas.join(", ") : "No faltaba ningún mes.") + (afinadas.length ? " · Afinadas: " + afinadas.join(", ") : ""));
+}
+
+/* En las pestañas que aún no tienen datos, deja "Mes y año" como fecha exacta
+   del día 1 y el renglón "(+) Renta de casa club" del resumen como fórmula
+   hacia el total de su sección (al copiar un mes a mano suele quedar un
+   número fijo). No toca ninguna pestaña con cobros o gastos. */
+function afinarVacios_() {
+  const ss = hoja_();
+  const out = [];
+  hojasMes_(ss).forEach(info => {
+    if (leerMes_(info).capturado) return;
+    const h = info.hoja;
+    const vals = h.getRange(1, 2, FILAS, 1).getValues();
+    const etiquetas = vals.map(f => norm_(f[0]));
+    let cambio = false;
+    const fMes = etiquetas.findIndex(e => e.indexOf("mesyano") === 0);
+    if (fMes >= 0 && h.getRange(fMes + 1, 3).getFormula() !== "=DATE(" + info.anio + "," + (info.mes + 1) + ",1)") {
+      h.getRange(fMes + 1, 3).setFormula("=DATE(" + info.anio + "," + (info.mes + 1) + ",1)");
+      cambio = true;
+    }
+    const fCobros = etiquetas.findIndex(e => e.indexOf("cobrospordepartamento") === 0);
+    const fRenta = etiquetas.findIndex((e, i) => e.indexOf("rentadecasaclub") === 0 && (fCobros < 0 || i < fCobros));
+    const fCasa = etiquetas.findIndex((e, i) => e.indexOf("ingresoporrentadecasaclub") === 0 && i > fCobros);
+    if (fRenta >= 0 && fCasa >= 0) {
+      let fTotal = -1;
+      for (let i = fCasa + 2; i < etiquetas.length; i++) if (etiquetas[i].indexOf("total") === 0) { fTotal = i; break; }
+      if (fTotal >= 0 && !h.getRange(fRenta + 1, 3).getFormula()) {
+        h.getRange(fRenta + 1, 3).setFormula("=C" + (fTotal + 1));
+        cambio = true;
+      }
+    }
+    if (cambio) out.push(h.getName());
+  });
+  return out;
 }
 
 /* Crea solo la pestaña del mes siguiente al último (sirve también para enero del año que entra). */
 function crearSiguienteMes() {
   const creadas = crearMeses_(1, true);
-  SpreadsheetApp.getActive().toast(creadas.length ? "Pestaña creada: " + creadas[0] : "No se creó nada.", "La Valetta", 10);
+  aviso_(creadas.length ? "Pestaña creada: " + creadas[0] : "No se creó nada.");
 }
 
 function crearMeses_(cuantos, cruzarAnio) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = hoja_();
   const hojas = hojasMes_(ss);
   if (!hojas.length) throw new Error("No hay ninguna pestaña mensual de la cual copiar (ENERO, FEBRERO…).");
   const creadas = [];
@@ -280,7 +322,8 @@ function limpiarMes_(h, nombrePrev, mes, anio) {
   const filaDe = (clave, desde) => { for (let i = desde || 0; i < etiquetas.length; i++) if (etiquetas[i].indexOf(clave) === 0) return i + 1; return -1; };
   const hastaTotal = (inicio) => { for (let i = inicio + 2; i <= etiquetas.length; i++) if (etiquetas[i - 1].indexOf("total") === 0) return i - 1; return inicio + 2; };
 
-  h.getRange("C5").setValue(new Date(anio, mes, 1));
+  const fMes = filaDe("mesyano");
+  h.getRange(fMes > 0 ? fMes : 5, 3).setFormula("=DATE(" + anio + "," + (mes + 1) + ",1)");   // día 1 exacto, sin hora ni zona horaria
   const ref = /\s/.test(nombrePrev) ? "'" + nombrePrev + "'" : nombrePrev;
   const fSaldo = filaDe("saldoinicial");
   if (fSaldo > 0) h.getRange(fSaldo, 3).setFormula("=" + ref + "!C" + saldoFinalFila_(etiquetas));
@@ -293,6 +336,8 @@ function limpiarMes_(h, nombrePrev, mes, anio) {
     const n = hastaTotal(fCasa) - fCasa - 1;
     h.getRange(fCasa + 2, 2, n, 3).clearContent();                                                         // B:D
     h.getRange(fCasa + 2, 2).setValue("Renta de casa club");
+    const fRenta = filaDe("rentadecasaclub");
+    if (fRenta > 0 && fRenta < fCobros) h.getRange(fRenta, 3).setFormula("=C" + (hastaTotal(fCasa) + 1));   // "(+) Renta de casa club" del resumen → fila TOTAL de la sección
   }
   const fFijos = filaDe("egresosfijos", desde);
   if (fFijos > 0) h.getRange(fFijos + 2, 3, hastaTotal(fFijos) - fFijos - 1, 2).clearContent();           // C:D, conceptos se quedan
