@@ -7,70 +7,57 @@ comunes y rendición de cuentas. Cuatro páginas sobre `css/styles.css`:
 ## Finanzas en vivo desde Google Sheets
 
 `finanzas.html` se protege con clave (hash SHA-256 en `js/finanzas.js`) y se
-alimenta de la hoja **"Valetta · Captura mensual de cuentas"**. Para que las
-métricas cambien solas cuando la Administración mueve la hoja:
+alimenta de la hoja **"Valetta-Captura-Mensual"** de la Administración, que
+tiene una pestaña por mes (ENERO, FEBRERO, …) con la misma plantilla.
 
-1. **Crear en la hoja una pestaña `Resumen`** con una fila por mes y estos
-   encabezados (el orden no importa):
+### Camino recomendado: el Apps Script de la hoja
 
-   | Mes ID | Mes | Corto | Saldo inicial | Saldo final | Mantenimiento cobrado | Agua cobrada | Casa club cobrada | Gastos fijos | Gastos variables | Unidades que pagaron | % cobranza | Unidades morosas | Mora acumulada | Unidades con mora | Pagos adelantados | Unidades adelantadas |
-   |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-   | 2026-08 | Agosto | Ago | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… |
+`apps-script/Code.gs` se pega dentro de la hoja (Extensiones → Apps Script) y
+se publica como aplicación web; su URL se pega en `API_URL` de
+`js/finanzas.js`. Pasos completos en `apps-script/INSTALAR.md`.
 
-   Las cuatro últimas columnas son opcionales y salen de una pestaña auxiliar
-   `Saldos` (que **no se publica**): una fila por departamento, una columna
-   por mes con lo que pagó ese mes (buscado en la pestaña del mes), y para
-   cada mes el saldo acumulado = pagado acumulado − meses transcurridos ×
-   cuota. Entonces, para el mes N:
+- El script lee las pestañas mensuales por su nombre (`OCTUBRE`, `ENERO 2027`)
+  y busca cada dato por su etiqueta, así que aguanta filas movidas.
+- Devuelve solo agregados por mes: saldos, ingresos, egresos, cobranza, mora
+  acumulada y adelantos (calculados unidad por unidad dentro del script), el
+  desglose de gastos con su liga de comprobante y los proyectos en curso.
+- Un mes aparece en el sitio en cuanto su pestaña tiene cobros o gastos; una
+  pestaña en blanco se ignora. Por eso `instalar()` deja creadas por
+  adelantado las pestañas que faltan hasta diciembre, copiadas del último mes
+  y encadenadas por saldo.
+- La respuesta se guarda en caché cinco minutos (`?fresh=1` la fuerza).
 
-   - Mora acumulada = `-SUMIF(saldos_N; "<0")`
-   - Unidades con mora = `COUNTIF(saldos_N; "<0")`
-   - Pagos adelantados = `SUMIF(saldos_N; ">0")`
-   - Unidades adelantadas = `COUNTIF(saldos_N; ">0")`
+### Alternativa sin script: pestañas publicadas como CSV
 
-   Así, quien paga varios meses por adelantado no cuenta como moroso en los
-   meses siguientes, y quien debe suma todo lo pendiente del año.
+Si no se quiere el script, se puede crear una pestaña `Resumen` con una fila
+por mes y estos encabezados (el orden no importa):
 
-   Cada celda puede ser una fórmula que busque el dato en la pestaña del mes
-   por su etiqueta, así no importa si las filas se mueven. Por ejemplo, para
-   la pestaña `ago-26`:
+| Mes ID | Mes | Corto | Saldo inicial | Saldo final | Mantenimiento cobrado | Agua cobrada | Casa club cobrada | Gastos fijos | Gastos variables | Unidades que pagaron | % cobranza | Unidades morosas | Mora acumulada | Unidades con mora | Pagos adelantados | Unidades adelantadas |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-09 | Septiembre | Sep | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… | =… |
 
-   ```
-   =INDEX('ago-26'!C:C; MATCH("SALDO FINAL DEL MES"; 'ago-26'!B:B; 0))
-   =INDEX('ago-26'!C:C; MATCH("(+) Mantenimiento cobrado"; 'ago-26'!B:B; 0))
-   =INDEX('ago-26'!C:C; MATCH("(−) Egresos fijos"; 'ago-26'!B:B; 0))
-   =INDEX('ago-26'!C:C; MATCH("Unidades morosas (mantenimiento)"; 'ago-26'!B:B; 0))
-   ```
-   (Si la hoja usa coma como separador de argumentos, cambiar `;` por `,`.
-   Los egresos pueden ir negativos: el sitio toma el valor absoluto.)
+Cada celda es una fórmula que busca el dato en la pestaña del mes por su
+etiqueta, envuelta en `IFERROR(...; "")` para que la fila quede vacía mientras
+la pestaña no exista:
 
-   **Para que un mes nuevo aparezca solo:** dejar en Resumen las doce filas
-   del año desde el principio, cada una apuntando a la pestaña que le
-   corresponde (`sep-26`, `oct-26`, …) y envolviendo cada fórmula en
-   `IFERROR(...; "")`. Mientras la pestaña no exista, la fila queda vacía y
-   el sitio la ignora; en cuanto la Administración duplica la plantilla con
-   ese nombre y la llena, la fila se completa y el mes aparece en la página.
-   La única condición es respetar el nombre de la pestaña.
+```
+=IFERROR(INDEX(SEPTIEMBRE!C:C; MATCH("SALDO FINAL DEL MES"; SEPTIEMBRE!B:B; 0)); "")
+```
 
-   ```
-   =IFERROR(INDEX('sep-26'!C:C; MATCH("SALDO FINAL DEL MES"; 'sep-26'!B:B; 0)); "")
-   ```
+Opcionalmente una pestaña `Detalle` (`Mes ID | Tipo | Concepto | Monto |
+Comprobante`, Tipo `fijo` o `variable`). Se publican solo esas pestañas
+(Archivo → Compartir → Publicar en la web → la pestaña → CSV) y las URLs van en
+`RESUMEN_URL` y `DETALLE_URL`. Este camino solo se usa si `API_URL` está vacía
+o no responde.
 
-2. **Opcional: una pestaña `Detalle`** con el desglose por concepto, una fila
-   por gasto: `Mes ID | Tipo | Concepto | Monto | Comprobante` (Tipo es
-   `fijo` o `variable`; Comprobante, la liga de Drive si la hay). Sin esta
-   pestaña, el desglose de los meses nuevos aparece como "pendiente".
+### Regla de privacidad
 
-3. **Publicar solo esas pestañas**: Archivo → Compartir → Publicar en la web →
-   elegir la pestaña → *Valores separados por comas (.csv)* → Publicar.
-   Copiar cada URL en `RESUMEN_URL` y `DETALLE_URL` de `js/finanzas.js`.
+**Nunca publicar ni devolver la pestaña de un mes**: trae los cobros por
+departamento. Lo que entrega el script o lo publicado lo puede leer cualquiera
+con la URL; la clave del sitio no lo protege. Solo agregados.
 
-4. Regla de privacidad: **nunca publicar la pestaña de un mes** (trae los
-   cobros por departamento). Lo publicado lo puede leer cualquiera con la URL;
-   la clave del sitio no lo protege. Solo agregados.
-
-Mientras las URLs estén vacías o la hoja no responda, la página muestra la
-copia de `js/data.js` (enero–agosto 2026).
+Mientras nada responda, la página muestra la copia de `js/data.js`
+(enero–septiembre 2026).
 
 ## Vista local
 

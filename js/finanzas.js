@@ -36,31 +36,22 @@
   });
 
   /* ---------- Origen de datos en vivo ----------
-     La página se alimenta de la hoja de Google Sheets de la Administración.
-     Para que funcione hay que publicar DOS pestañas como CSV
-     (en la hoja: Archivo → Compartir → Publicar en la web → elegir la
-     pestaña → "Valores separados por comas (.csv)") y pegar aquí las URLs.
+     Opción recomendada: el Apps Script ligado a la hoja (apps-script/Code.gs,
+     pasos en apps-script/INSTALAR.md). Publicado como aplicación web entrega
+     un JSON con las cifras AGREGADAS de cada pestaña mensual (ENERO, FEBRERO…);
+     pegar aquí la URL que termina en /exec. Un mes aparece en el sitio en
+     cuanto su pestaña tiene datos; no hay que tocar nada cada mes.
 
-     1) RESUMEN_URL — una fila por mes, con estos encabezados (el orden no
-        importa; mayúsculas, acentos y espacios tampoco):
-        Mes ID | Mes | Corto | Saldo inicial | Saldo final |
-        Mantenimiento cobrado | Agua cobrada | Casa club cobrada |
-        Gastos fijos | Gastos variables | Unidades que pagaron |
-        % cobranza | Unidades morosas | Mora acumulada | Unidades con mora |
-        Pagos adelantados | Unidades adelantadas
-        (las cuatro últimas son opcionales; ver README para calcularlas)
-        "Mes ID" va como 2026-09. Cada celda puede ser una fórmula que apunte
-        a la pestaña del mes, así la fila se llena sola.
+     Alternativa sin script: publicar como CSV una pestaña Resumen (y, si se
+     quiere, Detalle) y pegar sus URLs abajo; el formato está en el README.
+     Solo se usa si API_URL está vacía o no responde.
 
-     2) DETALLE_URL (opcional) — el desglose por concepto, una fila por
-        gasto: Mes ID | Tipo | Concepto | Monto | Comprobante
-        Tipo es "fijo" o "variable"; Comprobante es la liga de Drive, si hay.
+     Si nada responde, se muestra la copia de js/data.js.
 
-     Si una URL queda vacía o la descarga falla, se usa js/data.js.
-
-     REGLA: lo publicado es legible por cualquiera que tenga la URL; la clave
-     del sitio no lo protege. Esas pestañas NUNCA llevan datos por
-     departamento: solo agregados. */
+     REGLA: lo que entrega el script o lo publicado lo puede leer cualquiera
+     que tenga la URL; la clave del sitio no lo protege. Por eso solo viajan
+     agregados: nunca cobros por departamento. */
+  const API_URL = "";
   const RESUMEN_URL = "";
   const DETALLE_URL = "";
 
@@ -450,9 +441,11 @@
   }
 
   function renderProyectos() {
-    let rows = "<thead><tr><th>Proyecto</th><th>Estado</th><th class='num'>Monto</th></tr></thead><tbody>";
+    let rows = "<thead><tr><th>Proyecto</th><th>Estado</th><th class='num'>Monto / avance</th></tr></thead><tbody>";
     (C.proyectos || []).forEach(p => {
-      rows += "<tr><td>" + esc(p.nombre) + "</td><td>" + esc(p.estado) + "</td><td class='num'>" + (p.presupuesto ? fmt(p.presupuesto) : "por definir") + "</td></tr>";
+      const extra = p.liga ? "<a href='" + esc(p.liga) + "' target='_blank' rel='noopener'>ver avance</a>"
+        : p.avance ? esc(p.avance) : p.presupuesto ? fmt(p.presupuesto) : "por definir";
+      rows += "<tr><td>" + esc(p.nombre) + "</td><td>" + esc(p.estado || "") + "</td><td class='num'>" + extra + "</td></tr>";
     });
     if (!(C.proyectos || []).length) rows += "<tr><td colspan='3' style='color:var(--muted); font-style:italic'>Sin proyectos registrados.</td></tr>";
     document.getElementById("tProyectos").innerHTML = rows + "</tbody>";
@@ -586,13 +579,49 @@
     return true;
   }
 
+  /* ---------- Lectura del Apps Script (JSON) ---------- */
+  async function cargarApi() {
+    if (!API_URL) return false;
+    const r = await fetch(API_URL + (API_URL.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now(), { cache: "no-store", redirect: "follow" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    if (!j || !j.ok) throw new Error((j && j.error) || "respuesta sin datos");
+    const todos = (j.meses || []).filter(m => /^\d{4}-\d{2}$/.test(String(m.id || "")));
+    if (!todos.length) throw new Error("el script no trae meses capturados");
+    /* Se muestra el año más reciente que tenga meses capturados. */
+    const anio = Math.max(...todos.map(m => parseInt(m.id.slice(0, 4), 10)));
+    const n = v => (typeof v === "number" && isFinite(v)) ? v : null;
+    const armados = todos.filter(m => parseInt(m.id.slice(0, 4), 10) === anio).map(o => {
+      const mesNum = parseInt(o.id.slice(5), 10);
+      const ing = o.ingresos || {}, egr = o.egresos || {}, cob = o.cobranza || {}, det = o.detalle || {}, mr = o.mora || {};
+      const nombre = String(o.nombre || "").trim() || NOMBRES[mesNum - 1] || o.id;
+      return {
+        id: o.id, nombre: nombre, corto: String(o.corto || "").trim() || nombre.slice(0, 3),
+        saldoIni: num(o.saldoIni), saldoFin: num(o.saldoFin),
+        ingresos: { manto: num(ing.manto), agua: num(ing.agua), casaClub: num(ing.casaClub) },
+        egresos: { fijos: Math.abs(num(egr.fijos)), variables: Math.abs(num(egr.variables)) },
+        cobranza: { pagaron: num(cob.pagaron), pct: num(cob.pct), morosos: num(cob.morosos) },
+        mora: { acumulada: n(mr.acumulada), unidades: n(mr.unidades), adelantos: n(mr.adelantos), unidadesAdelanto: n(mr.unidadesAdelanto) },
+        detalle: { fijos: (det.fijos || []).map(it => it.slice()), variables: (det.variables || []).map(it => it.slice()) }
+      };
+    }).sort((a, b) => a.id.localeCompare(b.id));
+    if (!armados.length) throw new Error("sin meses del año " + anio);
+    C.anio = anio;
+    if (num(j.unidades) > 0) C.unidades = num(j.unidades);
+    if (num(j.cuota) > 0) C.cuota = num(j.cuota);
+    if (Array.isArray(j.proyectos) && j.proyectos.length) C.proyectos = j.proyectos;
+    C.meses.length = 0;
+    armados.forEach(m => C.meses.push(m));
+    return true;
+  }
+
   function renderFuente(live) {
     const el = document.getElementById("fuente");
     if (!el) return;
     el.className = "source-badge" + (live ? " live" : "");
     el.innerHTML = '<span class="dot"></span>' + (live
       ? "Datos en vivo desde la hoja de la Administración · " + esc(rango())
-      : "Copia local · " + esc(rango()) + " · la hoja en vivo se conecta desde js/finanzas.js");
+      : "Copia local · " + esc(rango()) + " · la hoja en vivo se conecta pegando la URL del script en js/finanzas.js");
   }
 
   /* ---------- Render general ---------- */
@@ -620,13 +649,16 @@
     if (i >= 0) abrirMes(i);
   }
 
-  cargarHoja().then(ok => {
+  cargarApi().catch(e => {
+    console.warn("[Valetta] El script de la hoja no respondió (" + e.message + "). Se intenta la hoja publicada como CSV.");
+    return cargarHoja();
+  }).then(ok => {
     if (!ok) return;
     live = true;
     mesIdx = M.length - 1;
     if (rendered) { rendered = false; render(); }
   }).catch(e => {
-    console.warn("[Valetta] No se pudo leer la hoja publicada (" + e.message + "). Se muestran los datos de js/data.js.");
+    console.warn("[Valetta] No se pudo leer la hoja (" + e.message + "). Se muestran los datos de js/data.js.");
   });
 
   if (sessionStorage.getItem("valettaFin") === "1") { unlock(); }

@@ -1,8 +1,9 @@
-/* Datos financieros — Condominio La Valetta, enero–agosto 2026.
+/* Datos financieros — Condominio La Valetta, enero–septiembre 2026.
    Fuente: hoja "Valetta · Captura mensual de cuentas" de la Administración
    (Google Sheets). Esta copia sirve de respaldo: si js/finanzas.js tiene
-   configurada la URL de la hoja publicada, los meses se leen de ahí en cada
-   carga y lo de este archivo solo se usa cuando la hoja no responde.
+   configurada la URL del Apps Script de la hoja (o de la hoja publicada), los
+   meses se leen de ahí en cada carga y lo de este archivo solo se usa cuando
+   la hoja no responde.
    La morosidad se publica SIEMPRE agregada (sin identificar unidades).
    "mora" es el saldo acumulado del año por unidad (pagado menos cuotas
    transcurridas): acumulada = suma de saldos en contra; adelantos = suma de
@@ -184,6 +185,26 @@ const VALETTA = {
           ["Mano de obra: flotador de la cisterna", 3500],
           ["Flotador y conexiones", 1500],
           ["Poda de maleza en la barda exterior", 4500]
+        ]
+      }
+    },
+    {
+      id: "2026-09", nombre: "Septiembre", corto: "Sep",
+      saldoIni: 3481.05, saldoFin: 4368.27,
+      ingresos: { manto: 30800, agua: 0, casaClub: 1000 },
+      egresos: { fijos: 24978.22, variables: 5934.56 },
+      cobranza: { pagaron: 28, pct: 87.5, morosos: 4 },
+      mora: { acumulada: 5500, unidades: 2, adelantos: 2200, unidadesAdelanto: 1 },
+      detalle: {
+        fijos: [
+          ["Servicios de asistencia administrativa", 23973.72],
+          ["Telmex casa club", 549],
+          ["Telmex caseta de vigilancia", 449],
+          ["Comisiones bancarias", 6.50]
+        ],
+        variables: [
+          ["Instalación de sensor de lluvia", 1294.56],
+          ["Mantenimiento del elevador (julio y agosto)", 4640]
         ]
       }
     }
