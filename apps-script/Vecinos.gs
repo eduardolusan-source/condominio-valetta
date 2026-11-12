@@ -255,7 +255,7 @@ function instalarVecinos() {
   const h = hojaV_(HOJA_CFG_V, ["Clave", "Valor", "Para qué"]);
   const tiene = k => filasV_(HOJA_CFG_V, 1).some(f => String(f[0]).trim() === k);
   [["reporte_envio", "no", "«sí» manda el reporte del día 10 a los correos registrados. En «no» solo llega el kit a la Administración."],
-   ["reporte_copia", "lavaletta@gmail.com", "Quién recibe el kit del mes, el semáforo y los avisos de casa club (separa con comas)."],
+   ["reporte_copia", "lavalettaa@gmail.com", "Quién recibe el kit del mes, el semáforo y los avisos de casa club (separa con comas)."],
    ["sitio_url", "", "Dirección del sitio (sin / al final), para las ligas de los correos."],
    ["casa_club_garantia", 3000, "Garantía al apartar la casa club."], ["casa_club_costo", 1000, "Lo que se queda: limpieza y fondo de la casa club."]]
     .forEach(r => { if (!tiene(r[0])) h.getRange(h.getLastRow() + 1, 1, 1, 3).setValues([r]); });
@@ -332,5 +332,5 @@ function cuentaDeptoV_(depto) {
   saldo += adelanto;
   return { depto: depto, saldoInicial: saldoInicial, archivadoHasta: desde, meses: meses, adelanto: Math.round(adelanto * 100) / 100,
     debe: saldo < -0.5 ? Math.round(-saldo * 100) / 100 : 0, aFavor: saldo > 0.5 ? Math.round(saldo * 100) / 100 : 0, cuota: meses.length ? meses[meses.length - 1].cuota : 1100,
-    contacto: { tel: "524422827829", correo: "lavaletta@gmail.com" } };
+    contacto: { tel: "524422827829", correo: "lavalettaa@gmail.com" } };
 }
