@@ -103,7 +103,7 @@ El proyecto «La Valetta · Finanzas» de script.google.com ahora tiene dos arch
    9 h y los avisos de casa club cada 30 min.
 4. Implementar → Administrar implementaciones → lápiz → **Nueva versión** (la dirección no cambia).
 5. En **Config (sitio)**: `sitio_url` = la dirección del sitio; `reporte_copia` = quién recibe el kit
-   (lavaletta@gmail.com). `reporte_envio` queda en «no»: así el día 10 solo llega el kit a la Administración.
+   (lavalettaa@gmail.com). `reporte_envio` queda en «no»: así el día 10 solo llega el kit a la Administración.
    Cuando la Administración esté de acuerdo, cámbialo a «sí» y el reporte sale a los correos registrados.
 6. Probar sin molestar a nadie: Ejecutar **reportePrueba** (llega solo a ti) y **revisar** (semáforo).
 
