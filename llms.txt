@@ -13,6 +13,7 @@
 
 ## Páginas
 - [Inicio](index.html)
+- [Mi cuenta](micuenta.html): estado de cuenta del departamento, con PIN (privado).
 - [Reglamento](reglamento.html): derechos, obligaciones, horarios y multas.
 - [Áreas comunes](areas-comunes.html): casa club, estacionamiento, elevador, terrazas, mascotas, drenaje.
 - [Casa club](casa-club.html): calendario de días apartados.

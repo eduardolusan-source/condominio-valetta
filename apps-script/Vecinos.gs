@@ -30,6 +30,7 @@ function rutaVecinosGet_(p) {
   if (p.accion === "vecinos") return { ok: true, deptos: deptosV_(), correos: correosCuenta_() };
   if (p.accion === "casa") return casaPublica_();
   if (p.accion === "folio") return folioCasa_(p.folio);
+  if (p.accion === "resolverCasa") return resolverCasaV_(p);
   return null;
 }
 function doPost(e) {
@@ -39,7 +40,8 @@ function doPost(e) {
     if (String(d.web || "").trim()) return texto_(JSON.stringify({ ok: true }));                 // campo trampa
     if (!limiteV_("post", 300)) return texto_(JSON.stringify({ ok: false, error: "espera" }));
     lock.waitLock(15000);
-    const r = d.accion === "correo" ? registrarCorreoV_(d) : d.accion === "casa" ? reservarCasaV_(d) : d.accion === "cancelarCasa" ? cancelarCasaV_(d) : { ok: false, error: "accion" };
+    const r = d.accion === "correo" ? registrarCorreoV_(d) : d.accion === "casa" ? reservarCasaV_(d) : d.accion === "cancelarCasa" ? cancelarCasaV_(d)
+      : d.accion === "pin" ? crearPinV_(d) : d.accion === "cuenta" ? miCuentaV_(d) : { ok: false, error: "accion" };
     return texto_(JSON.stringify(r));
   } catch (err) { return texto_(JSON.stringify({ ok: false, error: String(err.message || err) })); }
   finally { try { lock.releaseLock(); } catch (_) {} }
@@ -62,7 +64,12 @@ function correoOkV_(c) { return /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[a-z]{2,}$/i.test(S
 function diaV_(v) { return Object.prototype.toString.call(v) === "[object Date]" ? Utilities.formatDate(v, ZONA_V, "yyyy-MM-dd") : String(v || "").slice(0, 10); }
 function limiteV_(k, max) { const c = CacheService.getScriptCache(), kk = "limv_" + k, n = Number(c.get(kk) || 0); if (n >= max) return false; c.put(kk, String(n + 1), 3600); return true; }
 function sitioV_() { return String(cfgV_().sitio_url || "").replace(/\/+$/, ""); }
-function admonV_() { const c = cfgV_(); return String(c.reporte_copia || "").split(/[,;\s]+/).filter(correoOkV_).concat([Session.getEffectiveUser().getEmail()]).filter((x, i, a) => x && a.indexOf(x) === i); }
+/* A quién le llega lo de la Administración (kit, semáforo, casa club, PIN nuevos): Config → reporte_copia.
+   Solo si está vacío, a la cuenta dueña del script. */
+function admonV_() { const l = String(cfgV_().reporte_copia || "").split(/[,;\s]+/).filter(correoOkV_).filter((x, i, a) => a.indexOf(x) === i); return l.length ? l : [Session.getEffectiveUser().getEmail()]; }
+function secretoV_() { const p = PropertiesService.getScriptProperties(); let k = p.getProperty("secreto"); if (!k) { k = Utilities.getUuid() + Utilities.getUuid(); p.setProperty("secreto", k); } return k; }
+function hexV_(b) { return b.map(x => ("0" + ((x + 256) % 256).toString(16)).slice(-2)).join(""); }
+function firmaV_(texto) { return hexV_(Utilities.computeHmacSha256Signature(texto, secretoV_())).slice(0, 32); }
 function claveOkV_(clave) {
   if (!limiteV_("clave_" + String(clave || "").length, 60)) return false;
   const b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(clave || "").trim(), Utilities.Charset.UTF_8);
@@ -131,7 +138,13 @@ function reservarCasaV_(d) {
   h.getRange(fila, 1, 1, ENC_RCC_V.length).setValues([[folio, new Date(), dia, depto, correo, "Por confirmar", ""]]);
   h.getRange(fila, 3).setNumberFormat("yyyy-mm-dd");
   try { h.getRange(fila, 6).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(EST_RCC_V, true).setAllowInvalid(true).build()); } catch (_) {}
-  admonV_().forEach(a => MailApp.sendEmail(a, "Casa club por confirmar " + folio + " · " + dia, "Depto " + depto + " pide la casa club el " + dia + ".\n\nConfírmala o recházala en la pestaña «" + HOJA_RCC_V + "» de la hoja (columna Estatus). Al residente le llega el aviso solo.", { name: REMITENTE_V }));
+  const liga = e => (sitioV_() ? sitioV_() + "/casa-admin.html" : ScriptApp.getService().getUrl()) + "?accion=resolverCasa&folio=" + folio + "&e=" + e + "&t=" + firmaV_(folio + "|" + e);
+  const boton = (e, txt, color) => '<a href="' + liga(e) + '" style="display:inline-block;margin:6px 8px 6px 0;padding:14px 22px;border-radius:999px;background:' + color + ';color:#fff;text-decoration:none;font-weight:700;font-size:16px">' + txt + "</a>";
+  const fechaL = Utilities.formatDate(new Date(dia + "T12:00:00"), ZONA_V, "dd/MM/yyyy"), otras = fs.filter(f => activaV_(f) && diaV_(f[2]) >= hoy).length;
+  admonV_().forEach(a => MailApp.sendEmail(a, "🏠 Casa club: depto " + depto + " pide el " + fechaL + " (" + folio + ")",
+    "Depto " + depto + " pide la casa club el " + dia + ". Confirmar: " + liga("Confirmada") + "  ·  Rechazar: " + liga("Rechazada"),
+    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Casa club · ' + folio + '</p><h2 style="margin:6px 0 4px">Depto ' + depto + " pide el " + fechaL + '</h2><p style="color:#52514e;margin:0 0 14px">10:00 a 23:59 h · garantía $3,000 · avisar a: ' + correo + "</p>" +
+      boton("Confirmada", "✅ Confirmar", "#2e7d32") + boton("Rechazada", "❌ Rechazar", "#b3261e") + '<p style="color:#898781;font-size:13px;margin-top:16px">Un toque basta: se anota en la hoja y al residente le llega el aviso. ' + (otras ? "Hay " + otras + " fecha(s) más apartadas en la pestaña «" + HOJA_RCC_V + "»." : "") + "</p></div>" }));
   MailApp.sendEmail(correo, "Recibimos tu solicitud de casa club " + folio, "Día: " + dia + " (10:00 a 23:59 h)\nEstatus: por confirmar.\n\nLa Administración te confirmará por correo. Garantía: $3,000; se devuelven $2,000 si todo está en orden.\nConsulta tu folio en la página «Casa club» del sitio.", { name: REMITENTE_V });
   return { ok: true, folio: folio };
 }
@@ -251,4 +264,73 @@ function instalarVecinos() {
   ScriptApp.newTrigger("envioMensual").timeBased().onMonthDay(10).atHour(9).inTimezone(ZONA_V).create();
   ScriptApp.newTrigger("avisosCasa").timeBased().everyMinutes(30).create();
   aviso_("Listo: pestañas Config (sitio), Correos, Reservas casa club y Reportes; envío del día 10 a las 9 h y avisos de casa club cada 30 min.");
+}
+
+/* El administrador toca «Confirmar» o «Rechazar» en el correo: la liga va firmada (no se puede inventar). */
+function resolverCasaV_(p) {
+  const folio = String(p.folio || "").toUpperCase(), e = p.e === "Confirmada" || p.e === "Rechazada" ? p.e : "";
+  if (!e || String(p.t || "") !== firmaV_(folio + "|" + e)) return { ok: false, error: "liga" };
+  const h = hoja_().getSheetByName(HOJA_RCC_V), fs = filasV_(HOJA_RCC_V, ENC_RCC_V.length), i = fs.findIndex(f => String(f[0]).toUpperCase() === folio);
+  if (!h || i < 0) return { ok: false, error: "no encontrado" };
+  const antes = String(fs[i][5] || "Por confirmar");
+  if (/cancelada/i.test(antes)) return { ok: false, error: "cancelada", folio: folio, dia: diaV_(fs[i][2]), depto: String(fs[i][3]) };
+  if (e === "Confirmada" && fs.some((f, k) => k !== i && /confirmada/i.test(String(f[5])) && diaV_(f[2]) === diaV_(fs[i][2]))) return { ok: false, error: "ocupado", folio: folio };
+  h.getRange(i + 2, 6).setValue(e);
+  avisosCasa();                                  // el residente se entera al momento
+  return { ok: true, folio: folio, estatus: e, antes: antes, dia: diaV_(fs[i][2]), depto: String(fs[i][3]) };
+}
+
+/* ------------------------------- Mi cuenta (PIN por departamento) -------------------------------
+   Cada propietario crea su PIN una vez (con la clave de residentes). Se guarda cifrado en la pestaña
+   «PIN (privado)»; nadie puede cambiar un PIN que ya existe: para reponerlo, la Administración borra
+   ese renglón. Cada PIN nuevo le llega como aviso a la Administración. */
+const HOJA_PIN_V = "PIN (privado)", ENC_PIN_V = ["Departamento", "PIN cifrado (no editar)", "Creado", "Correo"];
+function hashPinV_(depto, pin) { return hexV_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, secretoV_() + "|" + String(depto).toUpperCase() + "|" + String(pin), Utilities.Charset.UTF_8)); }
+function deptoValidoV_(depto) { const l = deptosV_(); const i = l.map(x => x.toLowerCase()).indexOf(String(depto || "").trim().toLowerCase()); return i >= 0 ? l[i] : (l.length ? "" : String(depto || "").trim()); }
+function crearPinV_(d) {
+  const depto = deptoValidoV_(d.depto), pin = String(d.pin || ""), correo = String(d.correo || "").trim().toLowerCase();
+  if (!depto) return { ok: false, error: "departamento" };
+  if (!/^\d{4,6}$/.test(pin)) return { ok: false, error: "pin" };
+  if (/^(\d)\1+$/.test(pin) || "0123456789".indexOf(pin) >= 0) return { ok: false, error: "facil" };
+  if (!claveOkV_(d.clave)) return { ok: false, error: "clave" };
+  if (correo && !correoOkV_(correo)) return { ok: false, error: "correo" };
+  const h = hojaV_(HOJA_PIN_V, ENC_PIN_V);
+  if (filasV_(HOJA_PIN_V, 1).some(f => String(f[0]).toUpperCase() === depto.toUpperCase())) return { ok: false, error: "existe" };
+  h.getRange(h.getLastRow() + 1, 1, 1, 4).setValues([[depto, hashPinV_(depto, pin), new Date(), correo]]);
+  admonV_().forEach(a => MailApp.sendEmail(a, "Mi cuenta: depto " + depto + " creó su PIN", "El depto " + depto + " creó su PIN para ver su estado de cuenta en el sitio" + (correo ? " (correo: " + correo + ")" : "") + ".\n\nSi no fue el propietario, borra su renglón en la pestaña «" + HOJA_PIN_V + "» y el depto podrá crear uno nuevo.", { name: REMITENTE_V }));
+  if (correo) MailApp.sendEmail(correo, "Tu PIN de La Valetta quedó listo", "Ya puedes ver el estado de cuenta del depto " + depto + " en la página «Mi cuenta» del sitio" + (sitioV_() ? ": " + sitioV_() + "/micuenta.html" : "") + ".\n\nSi lo olvidas, pide a la Administración que lo reponga.", { name: REMITENTE_V });
+  return Object.assign({ ok: true }, cuentaDeptoV_(depto));
+}
+function miCuentaV_(d) {
+  const depto = deptoValidoV_(d.depto), c = CacheService.getScriptCache(), k = "pinmal_" + String(depto).toUpperCase(), malos = Number(c.get(k) || 0);
+  if (!depto) return { ok: false, error: "departamento" };
+  if (malos >= 6) return { ok: false, error: "espera" };
+  const f = filasV_(HOJA_PIN_V, 2).find(x => String(x[0]).toUpperCase() === depto.toUpperCase());
+  if (!f) return { ok: false, error: "sinpin" };
+  if (String(f[1]) !== hashPinV_(depto, String(d.pin || ""))) { c.put(k, String(malos + 1), 3600); return { ok: false, error: "pinmal", quedan: 5 - malos }; }
+  c.remove(k);
+  return Object.assign({ ok: true }, cuentaDeptoV_(depto));
+}
+/* Estado de cuenta de UN depto, con la misma regla que la mora de Finanzas: todo lo pagado menos todas las
+   cuotas transcurridas, sin reiniciar en enero; los meses futuros cuentan como adelanto. */
+function cuentaDeptoV_(depto) {
+  const ss = hoja_(), hist = historico_(ss), hoyId = Utilities.formatDate(new Date(), ZONA_V, "yyyy-MM"), U = depto.toUpperCase();
+  let saldo = 0, desde = "", meses = [], adelanto = 0;
+  const archivados = Object.keys(hist).sort();
+  hojasMes_(ss).forEach(h => {
+    if (hist[h.id] && h.hoja.isSheetHidden()) return;
+    const m = leerMes_(h); if (!m.capturado) return;
+    const p = m.pagosPorUnidad.find(x => String(x[0]).toUpperCase() === U), pagado = p ? Number(p[1]) || 0 : 0;
+    if (m.id > hoyId) { adelanto += pagado; return; }
+    meses.push({ id: m.id, nombre: m.nombre + " " + m.anio, cuota: m.cuota, pagado: Math.round(pagado * 100) / 100 });
+  });
+  meses.sort((a, b) => a.id < b.id ? -1 : 1);
+  const ultArch = archivados.filter(id => !meses.length || id < meses[0].id).pop();
+  if (ultArch) { saldo = Number((hist[ultArch].saldos || {})[depto]) || 0; desde = ultArch; }
+  const saldoInicial = Math.round(saldo * 100) / 100;
+  meses.forEach(m => { saldo += m.pagado - m.cuota; m.saldo = Math.round(saldo * 100) / 100; m.estado = m.pagado >= m.cuota - 0.5 ? "pagado" : m.pagado > 0 ? "parcial" : "pendiente"; m.enCurso = m.id === hoyId; });
+  saldo += adelanto;
+  return { depto: depto, saldoInicial: saldoInicial, archivadoHasta: desde, meses: meses, adelanto: Math.round(adelanto * 100) / 100,
+    debe: saldo < -0.5 ? Math.round(-saldo * 100) / 100 : 0, aFavor: saldo > 0.5 ? Math.round(saldo * 100) / 100 : 0, cuota: meses.length ? meses[meses.length - 1].cuota : 1100,
+    contacto: { tel: "524422827829", correo: "lavaletta@gmail.com" } };
 }

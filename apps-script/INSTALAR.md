@@ -113,3 +113,16 @@ Notas
   sitio, cambia también `KEY_HASH_SITIO` en Vecinos.gs (el mismo hash de `js/finanzas.js`).
 - La Administración confirma la casa club cambiando la columna **Estatus** a Confirmada o Rechazada; el aviso
   al residente sale solo en menos de 30 minutos.
+
+### Casa club con un toque y «Mi cuenta» con PIN (12 de noviembre de 2026)
+Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión** (no hace falta volver a correr instalarVecinos).
+- Los avisos (casa club, PIN nuevos, kit del día 10) llegan solo a `Config (sitio) → reporte_copia`. Si quieres
+  recibirlos tú también, agrega tu correo ahí separado por coma.
+- El correo de cada solicitud de casa club trae **✅ Confirmar** y **❌ Rechazar**: un toque anota el estatus en
+  la hoja y avisa al residente. Las ligas van firmadas (no se pueden inventar) y abren `casa-admin.html`, así que
+  `sitio_url` debe estar lleno.
+- `micuenta.html`: cada departamento crea su PIN una vez (con la clave de residentes); se guarda cifrado en la
+  pestaña **PIN (privado)**. Nadie puede cambiar un PIN existente; para reponerlo, la Administración borra el
+  renglón de ese departamento. Cada PIN nuevo le llega como aviso. Tras 6 intentos fallidos, ese depto espera una hora.
+- La cuenta usa la misma regla que la mora de Finanzas: todo lo pagado menos todas las cuotas transcurridas, sin
+  reiniciar en enero; el mes en curso aparece como «Por pagar» y los meses futuros como adelanto.
