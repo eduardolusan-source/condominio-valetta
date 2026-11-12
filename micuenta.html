@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mi cuenta · Condominio La Valetta</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="assets/mark.png"><style>
+  .enl { font: inherit; border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; padding: .3rem; }
+  .dos2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .top-c { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; } .top-c b { font-size: 1.15rem; }
+  .gran { border-radius: 22px; padding: 1.2rem 1.2rem; text-align: center; color: #fff; background: #2e7d32; } .gran.no { background: #b3261e; } .gran.cur { background: #a86a00; }
+  .gran small { display: block; opacity: .92; font-size: .95rem; } .gran b { display: block; font-size: 2.4rem; line-height: 1.15; margin: .15rem 0; }
+  .tjs { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .7rem; }
+  .tj { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: .8rem; color: var(--ink); cursor: pointer; } .tj span { font-size: 1.4rem; } .tj b { display: block; font-size: 1.2rem; } .tj small { color: var(--muted); }
+  .sec-t { font-size: 1.1rem; margin: 1.3rem 0 .5rem; }
+  .filas { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .fila { display: grid; grid-template-columns: 1fr auto auto; gap: .6rem; align-items: center; width: 100%; font: inherit; text-align: left; background: none; border: 0; border-top: 1px solid var(--grid); padding: .85rem 1rem; color: var(--ink); cursor: pointer; min-height: 56px; }
+  .fila:first-child { border-top: 0; } .fila small { display: block; color: var(--muted); font-size: .8rem; } .fila i { font-style: normal; color: var(--muted); font-size: 1.3rem; }
+  .es { font-size: .8rem; font-weight: 800; padding: .25rem .65rem; border-radius: 999px; white-space: nowrap; } .es.ok { background: #d4edda; color: #1d5a2a; } .es.no { background: #f8d7da; color: #7a1c24; } .es.par { background: #fff3cd; color: #7a5a00; } .es.cur { background: #fdebd0; color: #7a4a00; }
+  @media (prefers-color-scheme: dark) { .es.ok { background: #1d4a2a; color: #b9f0c6; } .es.no { background: #5a1d22; color: #ffb3b9; } .es.par, .es.cur { background: #5a4300; color: #ffe08a; } }</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html"><img src="assets/mark.png" alt=""><span class="logo">LA VALETTA</span><span class="tag">Lucepolis Coto Club</span></a>
+    <nav class="main">
+      <a href="index.html">Inicio</a>
+      <a href="micuenta.html" class="active">Mi cuenta</a>
+      <a href="finanzas.html">Finanzas</a>
+      <a href="casa-club.html">Casa club</a>
+      <a href="reglamento.html">Reglamento</a>
+      <a href="areas-comunes.html">Áreas comunes</a>
+      <a href="emergencias.html">Qué hacer si…</a>
+    </nav>
+  </div>
+</header>
+<main class="pg">
+  <h1>🔐 Mi cuenta</h1>
+  <form class="caja" id="fE" novalidate>
+    <label class="lb" for="dep">Departamento</label><select class="in" id="dep"><option value="">Cargando…</option></select>
+    <label class="lb" for="pin">Tu PIN</label><input class="in" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" style="font-size:1.4rem;letter-spacing:.3em">
+    <label style="display:flex;gap:.5rem;align-items:center;margin-top:.8rem"><input type="checkbox" id="rec" checked style="width:22px;height:22px"> Recordar en este teléfono</label>
+    <button class="go" id="goE">Ver mi cuenta</button><p class="msg" id="mE" hidden></p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aCrear">¿Primera vez? <b>Crea tu PIN</b></button></p>
+  </form>
+  <form class="caja" id="fC" novalidate hidden>
+    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Crea tu PIN</h2><p class="sub" style="margin:0">Una sola vez por departamento. Solo tú lo sabrás.</p>
+    <label class="lb" for="depC">Departamento</label><select class="in" id="depC"></select>
+    <label class="lb" for="cla">Clave de residentes <small style="font-weight:400;color:var(--muted)">(la misma de Finanzas)</small></label><input class="in" id="cla" type="password" autocomplete="off">
+    <div class="dos2"><div><label class="lb" for="p1">PIN (4 a 6 números)</label><input class="in" id="p1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
+    <div><label class="lb" for="p2">Repítelo</label><input class="in" id="p2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div></div>
+    <label class="lb" for="mailC">Correo <small style="font-weight:400;color:var(--muted)">(opcional, para avisarte)</small></label><input class="in" id="mailC" type="email" inputmode="email" autocomplete="email">
+    <button class="go" id="goC">Crear mi PIN y entrar</button><p class="msg" id="mC" hidden></p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aEntrar">Ya tengo PIN</button></p>
+  </form>
+  <div id="cta" hidden></div>
+</main>
+<footer class="site-footer">
+  <div class="inner">
+    Condominio La Valetta · Lucepolis Coto Club, Milenio III, Querétaro · <a href="contactos.html">Contactos</a> · <a href="bienvenida.html">Bienvenida</a> · <a href="correo.html">Recibe el reporte</a> · <a href="privacidad.html">Aviso de privacidad</a>
+  </div>
+</footer>
+<script src="js/comun.js"></script>
+<script src="js/ventana.js"></script>
+<script>
+(function () {
+  "use strict";
+  const URL_ = "https://script.google.com/macros/s/AKfycbxi1yTin_RY9JwCVT4D6f6YJTJUXPiZ3e3NQdVcuhZPtgaHe-Eluts4Ug1xWoD-2Gtmtg/exec";
+  const $ = id => document.getElementById(id), esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const post = d => fetch(URL_, { method: "POST", body: JSON.stringify(d), headers: { "Content-Type": "text/plain;charset=utf-8" } }).then(r => r.json());
+  const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
+  let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
+  const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
+  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
+  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  const $m = v => "$" + Math.round(Math.abs(v)).toLocaleString("es-MX");
+  const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", existe: "Ese departamento ya tiene PIN. Si no lo recuerdas, pide a la Administración que lo reponga.",
+    sinpin: "Ese departamento todavía no tiene PIN: créalo abajo.", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
+  let sesion = null; try { sesion = JSON.parse(localStorage.getItem("valetta.cuenta") || "null"); } catch (e) {}
+  const llenar = j => { const op = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); $("dep").innerHTML = op; $("depC").innerHTML = op; };
+  deptos("dep").then(j => { if (j.deptos) llenar(j); if (sesion) { $("dep").value = sesion.depto; entrar(sesion.depto, sesion.pin, true); } }).catch(() => { $("dep").innerHTML = '<option value="">Sin conexión; recarga</option>'; });
+  if (claveG) $("cla").value = claveG;
+  $("aCrear").onclick = () => { $("fE").hidden = true; $("fC").hidden = false; $("depC").value = $("dep").value; };
+  $("aEntrar").onclick = () => { $("fC").hidden = true; $("fE").hidden = false; };
+  async function entrar(depto, pin, auto) {
+    const j = await post({ accion: "cuenta", depto: depto, pin: pin }).catch(() => ({ error: "conexión" }));
+    if (j.ok) { if ($("rec").checked) { try { localStorage.setItem("valetta.cuenta", JSON.stringify({ depto: depto, pin: pin })); } catch (e) {} } return pintar(j); }
+    if (auto) { try { localStorage.removeItem("valetta.cuenta"); } catch (e) {} return; }
+    msg("mE", false, (ERRC[j.error] || "No se pudo (" + j.error + ").") + (j.quedan > 0 && j.quedan < 4 ? " Te quedan " + j.quedan + " intentos." : ""));
+  }
+  $("fE").onsubmit = e => { e.preventDefault(); if (!$("dep").value) return msg("mE", false, "Elige tu departamento."); entrar($("dep").value, $("pin").value.trim()); };
+  $("fC").onsubmit = async e => { e.preventDefault();
+    if ($("p1").value !== $("p2").value) return msg("mC", false, "Los dos PIN no coinciden.");
+    const b = $("goC"); b.disabled = true;
+    const j = await post({ accion: "pin", depto: $("depC").value, clave: $("cla").value, pin: $("p1").value.trim(), correo: $("mailC").value.trim() }).catch(() => ({ error: "conexión" }));
+    b.disabled = false;
+    if (!j.ok) return msg("mC", false, ERRC[j.error] || "No se pudo (" + j.error + ").");
+    recordar($("cla").value); try { localStorage.setItem("valetta.cuenta", JSON.stringify({ depto: $("depC").value, pin: $("p1").value.trim() })); } catch (x) {}
+    pintar(j); };
+
+  function pintar(c) {
+    $("fE").hidden = true; $("fC").hidden = true; const box = $("cta"); box.hidden = false;
+    const ms = c.meses.slice().reverse(), pag = c.meses.filter(m => m.estado === "pagado").length, atr = c.meses.filter(m => m.estado !== "pagado" && !m.enCurso).length;
+    const cur = c.meses.find(m => m.enCurso), soloEste = c.debe > 0 && !atr && cur && cur.estado !== "pagado";
+    const wa = "https://wa.me/" + c.contacto.tel + "?text=" + encodeURIComponent("Hola, soy del depto " + c.depto + ". Revisé «Mi cuenta» en el sitio y tengo una duda: ");
+    const est = m => m.estado === "pagado" ? '<span class="es ok">✓ Pagado</span>' : m.enCurso ? '<span class="es cur">Por pagar</span>' : m.estado === "parcial" ? '<span class="es par">Faltan ' + $m(m.cuota - m.pagado) + "</span>" : '<span class="es no">Pendiente</span>';
+    box.innerHTML = '<div class="top-c"><b>Depto ' + esc(c.depto) + '</b><button type="button" class="enl" id="salir">Salir</button></div>' +
+      '<div class="gran ' + (c.debe > 0 ? (soloEste ? "cur" : "no") : "ok") + '">' + (c.debe > 0 ? "<small>" + (soloEste ? "Por pagar este mes" : "Debes hoy") + "</small><b>" + $m(c.debe) + "</b>" + (atr ? "<small>" + atr + (atr === 1 ? " mes atrasado" : " meses atrasados") + (cur && cur.estado !== "pagado" ? " + este mes" : "") + "</small>" : "")
+        : "<small>Tu cuenta</small><b>✓ Al corriente</b>" + (c.aFavor ? "<small>Saldo a favor: " + $m(c.aFavor) + "</small>" : "")) + "</div>" +
+      '<div class="tjs"><button type="button" class="tj" data-i="cuota"><span>🧾</span><b>' + $m(c.cuota) + '</b><small>cuota al mes</small></button><button type="button" class="tj" data-i="pag"><span>✅</span><b>' + pag + " de " + c.meses.length + '</b><small>meses pagados</small></button></div>' +
+      '<h2 class="sec-t">Mes por mes</h2><div class="filas">' + ms.map((m, i) => '<button type="button" class="fila" data-m="' + (ms.length - 1 - i) + '"><span><b>' + esc(m.nombre) + "</b>" + (m.enCurso ? "<small>este mes</small>" : "") + "</span>" + est(m) + '<i>›</i></button>').join("") + "</div>" +
+      '<div class="big-tel" style="margin-top:1rem"><button type="button" class="tel sec" id="como">🧮 Ver la cuenta</button><a class="tel wa" href="' + wa + '" target="_blank" rel="noopener">🤔 ¿No te cuadra?</a></div>' +
+      '<p class="sub" style="margin-top:1rem">Los pagos los registra la Administración en su hoja; si pagaste hace poco, puede tardar en aparecer. Para pagar o aclarar: <a href="tel:+' + c.contacto.tel + '">442 282 78 29</a>.</p>';
+    $("salir").onclick = () => { try { localStorage.removeItem("valetta.cuenta"); } catch (e) {} box.hidden = true; $("fE").hidden = false; $("pin").value = ""; };
+    box.onclick = e => {
+      const f = e.target.closest("[data-m]"), t = e.target.closest("[data-i]");
+      if (f) { const m = c.meses[+f.dataset.m]; window.ventana(m.nombre, '<div class="cuenta-l"><span>Cuota</span><b>' + $m(m.cuota) + '</b></div><div class="cuenta-l"><span>Pagaste</span><b>' + $m(m.pagado) + '</b></div><div class="cuenta-l tot"><span>' + (m.saldo < -0.5 ? "Debías al cerrar el mes" : "Saldo al cerrar el mes") + "</span><b>" + (m.saldo < -0.5 ? $m(m.saldo) : m.saldo > 0.5 ? "+" + $m(m.saldo) + " a favor" : "$0") + "</b></div>"); }
+      if (t && t.dataset.i === "cuota") window.ventana("Cuota de mantenimiento", '<p class="exp">' + $m(c.cuota) + " al mes por departamento. Se paga a la Administración.</p>");
+      if (t && t.dataset.i === "pag") window.ventana("Meses pagados", '<p class="exp">' + c.meses.filter(m => m.estado === "pagado").map(m => "✓ " + esc(m.nombre)).join("<br>") + "</p>");
+      if (e.target.id === "como") { const cu = c.meses.reduce((a, m) => a + m.cuota, 0), pa = c.meses.reduce((a, m) => a + m.pagado, 0), fin = c.saldoInicial + pa - cu + c.adelanto;
+        window.ventana("🧮 La cuenta", (c.saldoInicial ? '<div class="cuenta-l"><span>Saldo al cierre de ' + esc(c.archivadoHasta) + "</span><b>" + (c.saldoInicial < 0 ? "−" : "") + $m(c.saldoInicial) + "</b></div>" : "") +
+          '<div class="cuenta-l"><span>' + c.meses.length + " cuotas (" + esc(c.meses[0] ? c.meses[0].nombre : "") + " a hoy)</span><b>−" + $m(cu) + '</b></div><div class="cuenta-l"><span>Lo que has pagado</span><b>+' + $m(pa) + "</b></div>" +
+          (c.adelanto ? '<div class="cuenta-l"><span>Pagos adelantados</span><b>+' + $m(c.adelanto) + "</b></div>" : "") + '<div class="cuenta-l tot"><span>' + (fin < -0.5 ? "Debes" : "Resultado") + "</span><b>" + (fin < -0.5 ? $m(fin) : fin > 0.5 ? "+" + $m(fin) + " a favor" : "$0") + "</b></div>"); }
+    };
+  }
+})();
+</script>
+</body>
+</html>
