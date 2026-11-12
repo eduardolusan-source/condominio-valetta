@@ -2,13 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#6f766a">
 <title>Finanzas · Condominio La Valetta</title>
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/tablero.css?v=20261112">
 <link rel="icon" href="assets/mark.png">
 </head>
-<body>
+<body class="tb-pagina">
 <header class="site-header">
   <div class="inner">
     <a class="brand" href="index.html"><img src="assets/mark.png" alt=""><span class="logo">LA VALETTA</span><span class="tag">Lucepolis Coto Club</span></a>
@@ -24,7 +26,7 @@
 <!-- Portón de acceso -->
 <div id="gate" class="gate">
   <div class="lock">🔒</div>
-  <h1 style="font-size:1.3rem; margin:0.5rem 0 0.25rem">Rendición de cuentas</h1>
+  <h1 style="font-size:1.3rem; margin:0.5rem 0 0.25rem">Las cuentas de La Valetta</h1>
   <p style="color:var(--ink-2); font-size:0.92rem">Sección exclusiva para residentes.<br>Ingresa la clave que te compartió la Administración.</p>
   <form id="gateForm">
     <input id="gateKey" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="····" aria-label="Clave de acceso">
@@ -33,105 +35,10 @@
   </form>
 </div>
 
-<!-- Contenido protegido -->
-<main class="wrap" id="content" hidden>
-  <!-- ===== Vista general ===== -->
-  <section id="resumen">
-    <h1 class="section-title" style="margin-top:1rem" id="tituloGeneral">Rendición de cuentas</h1>
-    <p class="section-sub" id="rangoSub">Cifras de la hoja de captura mensual de la Administración.</p>
-    <div class="source-badge" id="fuente"><span class="dot"></span>Cargando…</div>
-
-    <div class="privacy">🛡️ <strong>Privacidad de adeudos.</strong> Por disposición de la Ley de protección de datos personales, la morosidad se informa siempre de forma <strong>agregada</strong>: montos y número de unidades, sin identificar ningún departamento.</div>
-
-    <div class="stat-grid" id="overviewCards"></div>
-
-    <div class="panel">
-      <h3>Mes por mes <span class="sub">toca un mes para ver su detalle</span></h3>
-      <div class="table-scroll"><table class="data" id="tAnual"></table></div>
-    </div>
-
-    <div class="two-col">
-      <div class="panel">
-        <h3>Ingresos vs. egresos por mes</h3>
-        <div class="legend">
-          <span class="li"><span class="sw" style="background:var(--series-1)"></span>Ingresos</span>
-          <span class="li"><span class="sw" style="background:var(--series-2)"></span>Egresos</span>
-        </div>
-        <div class="chart-box" id="chartBars"></div>
-      </div>
-      <div class="panel">
-        <h3>Saldo en caja al cierre de cada mes</h3>
-        <div class="chart-box" id="chartLine"></div>
-        <p style="font-size:0.85rem; color:var(--muted); margin:0.6rem 0 0" id="saldoNota"></p>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Morosidad del año <span class="sub">agregada · al cierre de cada mes</span></h3>
-      <div class="stat-grid" id="moraCards"></div>
-      <p style="font-size:0.85rem; color:var(--ink-2); margin:0.9rem 0 0.5rem"><strong>Cómo se lee.</strong> La mora acumulada compara, unidad por unidad, lo pagado en el año contra las cuotas transcurridas. Quien pagó varios meses por adelantado aparece "sin pago" en los meses siguientes, pero no debe nada: su saldo a favor se cuenta en pagos adelantados, no en mora.</p>
-      <div class="legend">
-        <span class="li"><span class="sw" style="background:var(--series-2)"></span>Mora acumulada</span>
-        <span class="li"><span class="sw" style="background:var(--series-1)"></span>Pagos adelantados</span>
-      </div>
-      <div class="chart-box" id="chartMora"></div>
-      <p style="font-size:0.85rem; color:var(--muted); margin:0.9rem 0 0">Los adeudos se gestionan de manera directa y confidencial entre la Administración y cada unidad.</p>
-    </div>
-
-    <div class="two-col">
-      <div class="panel">
-        <h3>En qué se va el gasto fijo <span class="sub">último mes</span></h3>
-        <div class="chart-box" id="chartFijos"></div>
-        <p style="font-size:0.85rem; color:var(--muted); margin:0.6rem 0 0">Los servicios de asistencia administrativa cubren administración, vigilancia y limpieza en un solo contrato.</p>
-      </div>
-      <div class="panel">
-        <h3>En qué se va el gasto variable <span class="sub">acumulado del año · <span id="variablesTotal"></span></span></h3>
-        <div class="chart-box" id="chartVariables"></div>
-        <p style="font-size:0.85rem; color:var(--muted); margin:0.6rem 0 0">Agrupado por rubro a partir del concepto de cada gasto.</p>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Trabajos y proyectos</h3>
-      <div class="table-scroll"><table class="data" id="tProyectos"></table></div>
-    </div>
-  </section>
-
-  <!-- ===== Detalle de un mes ===== -->
-  <section id="detalle" hidden>
-    <div class="back-bar"><a href="#resumen" class="btn primary" id="volver">← Volver a la vista general</a><span class="hint">Estás viendo el detalle de un mes.</span></div>
-    <h2 class="section-title" id="tituloMes" style="margin-top:0.5rem">Detalle del mes</h2>
-    <p class="section-sub">Cambia de mes con las pestañas.</p>
-    <div class="month-chips" id="chips" role="tablist"></div>
-
-    <div class="stat-grid" id="statCards"></div>
-
-    <div class="two-col" style="margin-top:1.25rem">
-      <div class="panel">
-        <h3>Ingresos del mes</h3>
-        <div class="table-scroll"><table class="data" id="tIngresos"></table></div>
-      </div>
-      <div class="panel">
-        <h3>Indicadores del mes</h3>
-        <div class="table-scroll"><table class="data" id="tIndicadores"></table></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Egresos del mes <span class="sub" id="egresosSub"></span></h3>
-      <div class="table-scroll"><table class="data" id="tEgresos"></table></div>
-    </div>
-
-    <div class="panel">
-      <h3>Morosidad al cierre del mes <span class="sub">agregada</span></h3>
-      <div class="stat-grid" id="morosidadCards"></div>
-      <p style="font-size:0.85rem; color:var(--muted); margin:0.9rem 0 0">Los adeudos se gestionan de manera directa y confidencial entre la Administración y cada unidad.</p>
-    </div>
-    <div class="back-bar" style="margin-top:1.5rem"><a href="#resumen" class="btn primary" id="volver2">← Volver a la vista general</a></div>
-  </section>
+<!-- Contenido protegido: lo dibuja js/tablero.js -->
+<main id="content" hidden>
+  <div id="tablero"></div>
 </main>
-
-<div class="viz-tip" id="vizTip"></div>
 
 <footer class="site-footer">
   <div class="inner">
@@ -139,7 +46,8 @@
   </div>
 </footer>
 
-<script src="js/data.js"></script>
-<script src="js/finanzas.js"></script>
+<script src="js/data.js?v=20261112"></script>
+<script src="js/tablero.js?v=20261112"></script>
+<script src="js/finanzas.js?v=20261112"></script>
 </body>
 </html>

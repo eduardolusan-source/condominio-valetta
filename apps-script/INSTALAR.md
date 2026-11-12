@@ -47,8 +47,8 @@ En `js/finanzas.js`, pegar esa URL en `API_URL` (va vacía) y subir el sitio.
 - Abrir la URL del script en el navegador: debe responder un texto JSON que
   empieza con `{"ok":true,"servicio":"valetta-finanzas"…` y trae los meses.
 - Abrir `finanzas.html` con la clave: la etiqueta de arriba debe decir
-  **"Datos en vivo desde la hoja de la Administración · enero a septiembre de 2026"**
-  (con punto verde). Si dice "Copia local", revisar la consola del navegador.
+  **"En vivo desde la hoja de la administración"** (con punto verde que late).
+  Si dice "Copia guardada", revisar la consola del navegador.
 - Para forzar una lectura sin caché: agregar `?fresh=1` a la URL del script.
 
 ## Después
