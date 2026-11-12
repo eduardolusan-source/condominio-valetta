@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/styles.css">
 <link rel="icon" href="assets/mark.png"><style>
   .enl { font: inherit; border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; padding: .3rem; }
+  .act { text-align: center; font-size: .85rem; color: var(--muted); margin: 0 0 .4rem; }
   .dos2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
   .top-c { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; } .top-c b { font-size: 1.15rem; }
   .gran { border-radius: 22px; padding: 1.2rem 1.2rem; text-align: center; color: #fff; background: #2e7d32; } .gran.no { background: #b3261e; } .gran.cur { background: #a86a00; }
@@ -77,20 +78,27 @@
   const VIEJO = '<div class="aviso-v">⚙️ El sitio todavía está conectado a la versión anterior del servicio. La administración del sitio debe publicar la nueva: <b>Implementar → Administrar implementaciones → ✏️ → Nueva versión</b>.</div>';
   const esViejo = j => !!j && j.servicio === "valetta-finanzas";
   const avisarViejo = () => { const m = document.querySelector("main.pg"); if (m && !m.querySelector(".aviso-v")) m.querySelector("h1").insertAdjacentHTML("afterend", VIEJO); };
-  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); $(sel).innerHTML = '<option value="">No disponible todavía</option>'; return {}; } if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  /* Copias en el teléfono: se pinta al instante lo último que se vio y la hoja actualiza detrás. */
+  const lee = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  const guarda = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const DEPTOS_FIJOS = ["A 01","A 02","A 03","A 04","A 05","A 06","A 11","A 12","A 13","A 14","A 15","A 16","A 17","A 21","A 22","A 23","A 24","A 25","A 26","A 27","A 31","A 32","A 33","A 34","A 35","A 36","A 37","PH 41","PH 42","PH 43","PH 44","PH 45"];
+  const opciones = (sel, lista) => { const v = $(sel).value; $(sel).innerHTML = '<option value="">Elige…</option>' + lista.map(d => "<option>" + esc(d) + "</option>").join(""); if (v) $(sel).value = v; };
+  const deptos = sel => { opciones(sel, (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
+    return fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); return {}; } if (j.ok) guarda("valetta.vecinos", j); if (j.ok && j.deptos.length) opciones(sel, j.deptos); return j; }); };
   const $m = v => "$" + Math.round(Math.abs(v)).toLocaleString("es-MX");
   const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", existe: "Ese departamento ya tiene PIN. Si no lo recuerdas, pide a la Administración que lo reponga.",
     sinpin: "Ese departamento todavía no tiene PIN: créalo abajo.", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
   let sesion = null; try { sesion = JSON.parse(localStorage.getItem("valetta.cuenta") || "null"); } catch (e) {}
-  const llenar = j => { const op = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); $("dep").innerHTML = op; $("depC").innerHTML = op; };
-  deptos("dep").then(j => { if (j.deptos) llenar(j); if (sesion) { $("dep").value = sesion.depto; entrar(sesion.depto, sesion.pin, true); } }).catch(() => { $("dep").innerHTML = '<option value="">Sin conexión; recarga</option>'; });
+  opciones("depC", (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
+  if (sesion) { const c0 = lee("valetta.cuenta.datos"); if (c0 && c0.depto === sesion.depto) { pintar(c0); $("cta").insertAdjacentHTML("afterbegin", '<p class="act" id="act">Actualizando…</p>'); } entrar(sesion.depto, sesion.pin, true); }
+  deptos("dep").then(j => { if (j.deptos) opciones("depC", j.deptos); if (sesion) $("dep").value = sesion.depto; }).catch(() => {});
   if (claveG) $("cla").value = claveG;
   $("aCrear").onclick = () => { $("fE").hidden = true; $("fC").hidden = false; $("depC").value = $("dep").value; };
   $("aEntrar").onclick = () => { $("fC").hidden = true; $("fE").hidden = false; };
   async function entrar(depto, pin, auto) {
     const j = await post({ accion: "cuenta", depto: depto, pin: pin }).catch(() => ({ error: "conexión" }));
-    if (j.ok) { if ($("rec").checked) { try { localStorage.setItem("valetta.cuenta", JSON.stringify({ depto: depto, pin: pin })); } catch (e) {} } return pintar(j); }
-    if (auto) { try { localStorage.removeItem("valetta.cuenta"); } catch (e) {} return; }
+    if (j.ok) { if ($("rec").checked || auto) { guarda("valetta.cuenta", { depto: depto, pin: pin }); guarda("valetta.cuenta.datos", j); } return pintar(j); }
+    if (auto) { if (j.error === "pinmal" || j.error === "sinpin") { try { localStorage.removeItem("valetta.cuenta"); localStorage.removeItem("valetta.cuenta.datos"); } catch (e) {} $("cta").hidden = true; $("fE").hidden = false; } else { const a = $("act"); if (a) a.textContent = "Sin conexión: es tu última consulta guardada."; } return; }
     msg("mE", false, (ERRC[j.error] || "No se pudo (" + j.error + ").") + (j.quedan > 0 && j.quedan < 4 ? " Te quedan " + j.quedan + " intentos." : ""));
   }
   $("fE").onsubmit = e => { e.preventDefault(); if (!$("dep").value) return msg("mE", false, "Elige tu departamento."); entrar($("dep").value, $("pin").value.trim()); };
@@ -100,7 +108,7 @@
     const j = await post({ accion: "pin", depto: $("depC").value, clave: $("cla").value, pin: $("p1").value.trim(), correo: $("mailC").value.trim() }).catch(() => ({ error: "conexión" }));
     b.disabled = false;
     if (!j.ok) return msg("mC", false, ERRC[j.error] || "No se pudo (" + j.error + ").");
-    recordar($("cla").value); try { localStorage.setItem("valetta.cuenta", JSON.stringify({ depto: $("depC").value, pin: $("p1").value.trim() })); } catch (x) {}
+    recordar($("cla").value); guarda("valetta.cuenta", { depto: $("depC").value, pin: $("p1").value.trim() }); guarda("valetta.cuenta.datos", j);
     pintar(j); };
 
   function pintar(c) {
@@ -116,7 +124,7 @@
       '<h2 class="sec-t">Mes por mes</h2><div class="filas">' + ms.map((m, i) => '<button type="button" class="fila" data-m="' + (ms.length - 1 - i) + '"><span><b>' + esc(m.nombre) + "</b>" + (m.enCurso ? "<small>este mes</small>" : "") + "</span>" + est(m) + '<i>›</i></button>').join("") + "</div>" +
       '<div class="big-tel" style="margin-top:1rem"><button type="button" class="tel sec" id="como">🧮 Ver la cuenta</button><a class="tel wa" href="' + wa + '" target="_blank" rel="noopener">🤔 ¿No te cuadra?</a></div>' +
       '<p class="sub" style="margin-top:1rem">Los pagos los registra la Administración en su hoja; si pagaste hace poco, puede tardar en aparecer. Para pagar o aclarar: <a href="tel:+' + c.contacto.tel + '">442 282 78 29</a>.</p>';
-    $("salir").onclick = () => { try { localStorage.removeItem("valetta.cuenta"); } catch (e) {} box.hidden = true; $("fE").hidden = false; $("pin").value = ""; };
+    $("salir").onclick = () => { try { localStorage.removeItem("valetta.cuenta"); localStorage.removeItem("valetta.cuenta.datos"); } catch (e) {} box.hidden = true; $("fE").hidden = false; $("pin").value = ""; };
     box.onclick = e => {
       const f = e.target.closest("[data-m]"), t = e.target.closest("[data-i]");
       if (f) { const m = c.meses[+f.dataset.m]; window.ventana(m.nombre, (m.estado === "cubierto" ? '<p class="exp">Este mes no tiene pago anotado. Lo cubre ' + (m.montoCubre ? "el pago de <b>" + $m(m.montoCubre) + "</b> de <b>" + esc(m.cubiertoPor) + "</b>, que alcanzó para varias cuotas." : "tu saldo a favor anterior.") + ' Si ese pago era para otra cosa, avisa a la Administración para corregirlo.</p>' : "") + '<div class="cuenta-l"><span>Cuota</span><b>' + $m(m.cuota) + '</b></div><div class="cuenta-l"><span>Pagaste este mes</span><b>' + $m(m.pagado) + '</b></div><div class="cuenta-l tot"><span>' + (m.saldo < -0.5 ? "Debías al cerrar el mes" : "Saldo al cerrar el mes") + "</span><b>" + (m.saldo < -0.5 ? $m(m.saldo) : m.saldo > 0.5 ? "+" + $m(m.saldo) + " a favor" : "$0") + "</b></div>"); }

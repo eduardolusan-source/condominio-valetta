@@ -81,12 +81,20 @@
     return { unidades: VALETTA.unidades, cuota: VALETTA.cuota, meses: meses, proyectos: proyectos(VALETTA.proyectos), fuente: { vivo: false, texto: rangoTexto(meses) } };
   }
 
+  /* La última respuesta en vivo se guarda en el teléfono: la siguiente visita la pinta al instante
+     y la hoja la actualiza en segundo plano (sin «brincar» desde la copia vieja de data.js). */
+  const LS = "valetta.fin.vivo";
+  function guardada() { try { const j = JSON.parse(localStorage.getItem(LS) || "null"); return j && j.ok ? j : null; } catch (_) { return null; } }
   async function modeloVivo() {
     if (!API_URL) return null;
     const r = await fetch(API_URL + (API_URL.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now(), { cache: "no-store", redirect: "follow" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
     if (!j || !j.ok) throw new Error((j && j.error) || "respuesta sin datos");
+    try { localStorage.setItem(LS, JSON.stringify(j)); } catch (_) { /* sin espacio */ }
+    return deRespuesta(j);
+  }
+  function deRespuesta(j) {
     const meses = (j.meses || []).filter(m => /^\d{4}-\d{2}$/.test(String(m.id || ""))).map(m => mes(m, true)).sort((a, b) => a.id.localeCompare(b.id));
     if (!meses.length) throw new Error("el script no trae meses capturados");
     return {
@@ -126,15 +134,16 @@
   function abrir() {
     gate.hidden = true;
     content.hidden = false;
-    try { sessionStorage.setItem("valettaFin", "1"); } catch (_) { /* sin almacenamiento */ }
+    try { localStorage.setItem("valettaFin", "1"); } catch (_) { /* sin almacenamiento */ }
     if (tablero) return;
     tablero = Tablero.montar(document.getElementById("tablero"), OPCIONES);
-    tablero.actualizar(modeloLocal());
+    let previa = null; try { const g = guardada(); if (g) previa = deRespuesta(g); } catch (_) { previa = null; }
+    tablero.actualizar(previa || modeloLocal());
     modeloVivo().then(m => { if (m) tablero.actualizar(m); })
       .catch(e => console.warn("[Valetta] El script de la hoja no respondió (" + e.message + "). Se muestra la copia de js/data.js."));
   }
 
   let guardado = null;
-  try { guardado = sessionStorage.getItem("valettaFin"); } catch (_) { /* sin almacenamiento */ }
+  try { guardado = localStorage.getItem("valettaFin") || sessionStorage.getItem("valettaFin"); } catch (_) { /* sin almacenamiento */ }
   if (guardado === "1") abrir();
 })();

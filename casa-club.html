@@ -40,7 +40,7 @@
   <div class="cal">
     <div class="cal-h"><button type="button" id="ant" aria-label="Mes anterior">‹</button><b id="mesT"></b><button type="button" id="sig" aria-label="Mes siguiente">›</button></div>
     <div class="cal-s"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
-    <div class="cal-g" id="grid"><p style="grid-column:1/-1;color:var(--muted)">Cargando…</p></div>
+    <div class="cal-g" id="grid"></div>
     <div class="ley"><span>libre</span><span class="p">por confirmar</span><span class="l">ocupado</span></div>
   </div>
   <form class="caja" id="f" hidden novalidate style="margin-top:1rem">
@@ -75,7 +75,13 @@
   const VIEJO = '<div class="aviso-v">⚙️ El sitio todavía está conectado a la versión anterior del servicio. La administración del sitio debe publicar la nueva: <b>Implementar → Administrar implementaciones → ✏️ → Nueva versión</b>.</div>';
   const esViejo = j => !!j && j.servicio === "valetta-finanzas";
   const avisarViejo = () => { const m = document.querySelector("main.pg"); if (m && !m.querySelector(".aviso-v")) m.querySelector("h1").insertAdjacentHTML("afterend", VIEJO); };
-  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); $(sel).innerHTML = '<option value="">No disponible todavía</option>'; return {}; } if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  /* Copias en el teléfono: se pinta al instante lo último que se vio y la hoja actualiza detrás. */
+  const lee = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  const guarda = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const DEPTOS_FIJOS = ["A 01","A 02","A 03","A 04","A 05","A 06","A 11","A 12","A 13","A 14","A 15","A 16","A 17","A 21","A 22","A 23","A 24","A 25","A 26","A 27","A 31","A 32","A 33","A 34","A 35","A 36","A 37","PH 41","PH 42","PH 43","PH 44","PH 45"];
+  const opciones = (sel, lista) => { const v = $(sel).value; $(sel).innerHTML = '<option value="">Elige…</option>' + lista.map(d => "<option>" + esc(d) + "</option>").join(""); if (v) $(sel).value = v; };
+  const deptos = sel => { opciones(sel, (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
+    return fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); return {}; } if (j.ok) guarda("valetta.vecinos", j); if (j.ok && j.deptos.length) opciones(sel, j.deptos); return j; }); };
   const MS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"], DS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
   const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   const t0 = new Date(); t0.setHours(12, 0, 0, 0); const HOY = iso(t0), TOPE = iso(new Date(t0.getTime() + 90 * 864e5));
@@ -95,9 +101,12 @@
     const d = new Date(sel + "T12:00:00"); $("diaT").textContent = "📅 " + DS[d.getDay()].replace(/^./, c => c.toUpperCase()) + " " + d.getDate() + " de " + MS[d.getMonth()]; $("f").hidden = false; $("m").hidden = true; $("f").scrollIntoView({ behavior: "smooth", block: "start" }); };
   $("ant").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); pintar(); };
   $("sig").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() + 1, 1); pintar(); };
-  function cargar() { return fetch(URL_ + "?accion=casa&t=" + Date.now()).then(r => r.json()).then(j => { oc = {}; if (esViejo(j)) { avisarViejo(); $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--muted)">El calendario se activa en cuanto se publique la versión nueva.</p>'; return; } (j.ocupados || []).forEach(o => { oc[o.dia] = o.estatus; });
+  const usa = j => { oc = {}; (j.ocupados || []).forEach(o => { oc[o.dia] = o.estatus; }); if (j.deptos && j.deptos.length) { opciones("dep", j.deptos); if (yo.depto && !$("dep").value) $("dep").value = yo.depto; } pintar(); };
+  opciones("dep", (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS); if (yo.depto) $("dep").value = yo.depto;
+  const prev = lee("valetta.casa.pub"); if (prev && prev.ok) usa(prev); else pintar();
+  function cargar() { return fetch(URL_ + "?accion=casa&t=" + Date.now()).then(r => r.json()).then(j => { if (j && j.ok && j.ocupados) guarda("valetta.casa.pub", j); oc = {}; if (esViejo(j)) { avisarViejo(); $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--muted)">El calendario se activa en cuanto se publique la versión nueva.</p>'; return; } (j.ocupados || []).forEach(o => { oc[o.dia] = o.estatus; });
     if (j.deptos && j.deptos.length) { $("dep").innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); if (yo.depto) $("dep").value = yo.depto; } pintar(); })
-    .catch(() => { $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--bad-text)">Sin conexión con la hoja. Intenta en un momento.</p>'; }); }
+    .catch(() => { if (!lee("valetta.casa.pub")) $("grid").insertAdjacentHTML("afterend", '<p style="color:var(--bad-text)">Sin conexión con la hoja. Intenta en un momento.</p>'); }); }
   $("f").onsubmit = async e => { e.preventDefault(); const b = $("go"); b.disabled = true;
     const j = await post({ accion: "casa", dia: sel, depto: $("dep").value, nombre: $("nom").value.trim(), correo: $("mail").value.trim(), web: $("web").value }).catch(() => ({ error: "conexión" }));
     b.disabled = false;

@@ -112,6 +112,11 @@ function registrarCorreoV_(d) {
 /* ------------------------------- casa club ------------------------------- */
 const activaV_ = f => /por confirmar|confirmada/i.test(String(f[5] || "Por confirmar"));
 function casaPublica_() {
+  const c = CacheService.getScriptCache(), g = c.get("casa_pub"); if (g) return JSON.parse(g);
+  const r = casaPublicaFresca_(); try { c.put("casa_pub", JSON.stringify(r), 60); } catch (_) {} return r;
+}
+function olvidarCasa_() { try { CacheService.getScriptCache().remove("casa_pub"); } catch (_) {} }
+function casaPublicaFresca_() {
   const hoy = Utilities.formatDate(new Date(), ZONA_V, "yyyy-MM-dd");
   return { ok: true, ocupados: filasV_(HOJA_RCC_V, ENC_RCC_V.length).filter(f => f[0] && activaV_(f) && diaV_(f[2]) >= hoy).map(f => ({ dia: diaV_(f[2]), estatus: /confirmada/i.test(String(f[5])) ? "ocupado" : "apartado" })),
     deptos: deptosV_(), garantia: Number(cfgV_().casa_club_garantia) || 3000, costo: Number(cfgV_().casa_club_costo) || 1000 };
@@ -139,7 +144,7 @@ function reservarCasaV_(d) {
   const folio = "CC-" + ("000" + n).slice(-4), h = hojaV_(HOJA_RCC_V, ENC_RCC_V), fila = h.getLastRow() + 1;
   if (!String(h.getRange(1, 8).getValue() || "").trim()) h.getRange(1, 8).setValue(ENC_RCC_V[7]).setFontWeight("bold");
   h.getRange(fila, 1, 1, ENC_RCC_V.length).setValues([[folio, new Date(), dia, depto, correo, "Por confirmar", "", nombre]]);
-  h.getRange(fila, 3).setNumberFormat("yyyy-mm-dd");
+  h.getRange(fila, 3).setNumberFormat("yyyy-mm-dd"); olvidarCasa_();
   try { h.getRange(fila, 6).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(EST_RCC_V, true).setAllowInvalid(true).build()); } catch (_) {}
   const liga = e => (sitioV_() ? sitioV_() + "/casa-admin.html" : ScriptApp.getService().getUrl()) + "?accion=resolverCasa&folio=" + folio + "&e=" + e + "&t=" + firmaV_(folio + "|" + e);
   const boton = (e, txt, color) => '<a href="' + liga(e) + '" style="display:inline-block;margin:6px 8px 6px 0;padding:14px 22px;border-radius:999px;background:' + color + ';color:#fff;text-decoration:none;font-weight:700;font-size:16px">' + txt + "</a>";
@@ -155,7 +160,7 @@ function cancelarCasaV_(d) {
   const folio = String(d.folio || "").trim().toUpperCase(), correo = String(d.correo || "").trim().toLowerCase();
   const h = hoja_().getSheetByName(HOJA_RCC_V), fs = filasV_(HOJA_RCC_V, ENC_RCC_V.length), i = fs.findIndex(f => String(f[0]).toUpperCase() === folio && String(f[4]).toLowerCase() === correo);
   if (!h || i < 0) return { ok: false, error: "no encontrado" };
-  h.getRange(i + 2, 6).setValue("Cancelada");
+  h.getRange(i + 2, 6).setValue("Cancelada"); olvidarCasa_();
   admonV_().forEach(a => MailApp.sendEmail(a, "Casa club cancelada " + folio, "Depto " + fs[i][3] + " canceló la casa club del " + diaV_(fs[i][2]) + ". La fecha quedó libre.", { name: REMITENTE_V }));
   return { ok: true };
 }
@@ -278,7 +283,7 @@ function resolverCasaV_(p) {
   const antes = String(fs[i][5] || "Por confirmar");
   if (/cancelada/i.test(antes)) return { ok: false, error: "cancelada", folio: folio, dia: diaV_(fs[i][2]), depto: String(fs[i][3]) };
   if (e === "Confirmada" && fs.some((f, k) => k !== i && /confirmada/i.test(String(f[5])) && diaV_(f[2]) === diaV_(fs[i][2]))) return { ok: false, error: "ocupado", folio: folio };
-  h.getRange(i + 2, 6).setValue(e);
+  h.getRange(i + 2, 6).setValue(e); olvidarCasa_();
   avisosCasa();                                  // el residente se entera al momento
   return { ok: true, folio: folio, estatus: e, antes: antes, dia: diaV_(fs[i][2]), depto: String(fs[i][3]) };
 }
@@ -320,11 +325,9 @@ function cuentaDeptoV_(depto) {
   const ss = hoja_(), hist = historico_(ss), hoyId = Utilities.formatDate(new Date(), ZONA_V, "yyyy-MM"), U = depto.toUpperCase();
   let saldo = 0, desde = "", meses = [], adelanto = 0;
   const archivados = Object.keys(hist).sort();
-  hojasMes_(ss).forEach(h => {
-    if (hist[h.id] && h.hoja.isSheetHidden()) return;
-    const m = leerMes_(h);
+  matrizPagosV_().forEach(m => {
     if (!m.capturado && m.id !== hoyId) return;          // el mes en curso cuenta aunque aún no tenga capturas
-    const p = m.pagosPorUnidad.find(x => String(x[0]).toUpperCase() === U), pagado = p ? Number(p[1]) || 0 : 0;
+    const k = Object.keys(m.pagos).find(x => x.toUpperCase() === U), pagado = k ? Number(m.pagos[k]) || 0 : 0;
     if (m.id > hoyId) { adelanto += pagado; return; }
     meses.push({ id: m.id, nombre: m.nombre + " " + m.anio, cuota: m.cuota, pagado: Math.round(pagado * 100) / 100 });
   });
@@ -347,4 +350,19 @@ function cuentaDeptoV_(depto) {
   return { depto: depto, saldoInicial: saldoInicial, archivadoHasta: desde, meses: meses, adelanto: Math.round(adelanto * 100) / 100,
     debe: saldo < -0.5 ? Math.round(-saldo * 100) / 100 : 0, aFavor: saldo > 0.5 ? Math.round(saldo * 100) / 100 : 0, cuota: meses.length ? meses[meses.length - 1].cuota : 1100,
     contacto: { tel: "524422827829", correo: "lavalettaa@gmail.com" } };
+}
+
+/* Pagos de todos los deptos por mes (lo único que necesita «Mi cuenta»). Se guarda 2 minutos: así varias
+   consultas seguidas no vuelven a leer las 12 pestañas. Un cambio en la hoja se ve a más tardar 2 min después. */
+function matrizPagosV_() {
+  const c = CacheService.getScriptCache(), g = c.get("matriz_pagos"); if (g) return JSON.parse(g);
+  const ss = hoja_(), hist = historico_(ss), out = [];
+  hojasMes_(ss).forEach(h => {
+    if (hist[h.id] && h.hoja.isSheetHidden()) return;
+    const m = leerMes_(h), pagos = {};
+    m.pagosPorUnidad.forEach(p => { pagos[String(p[0]).trim()] = Number(p[1]) || 0; });
+    out.push({ id: m.id, nombre: m.nombre, anio: m.anio, cuota: m.cuota, capturado: m.capturado, pagos: pagos });
+  });
+  try { c.put("matriz_pagos", JSON.stringify(out), 120); } catch (_) {}
+  return out;
 }
