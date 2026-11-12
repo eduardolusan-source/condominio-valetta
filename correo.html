@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Recibe el reporte · Condominio La Valetta</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="assets/mark.png">
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html"><img src="assets/mark.png" alt=""><span class="logo">LA VALETTA</span><span class="tag">Lucepolis Coto Club</span></a>
+    <nav class="main">
+      <a href="index.html">Inicio</a>
+      <a href="finanzas.html">Finanzas</a>
+      <a href="casa-club.html">Casa club</a>
+      <a href="reglamento.html">Reglamento</a>
+      <a href="areas-comunes.html">Áreas comunes</a>
+      <a href="emergencias.html">Qué hacer si…</a>
+    </nav>
+  </div>
+</header>
+<main class="pg">
+  <h1>📩 Recibe el reporte</h1>
+  <p class="sub">Cada mes, cerca del día 10: saldo, ingresos, gastos y cobranza del edificio, en cifras agregadas.</p>
+  <div class="caja" id="avance" hidden></div>
+  <form class="caja" id="f" novalidate>
+    <label class="lb" for="dep">Tu departamento</label><select class="in" id="dep"><option value="">Cargando…</option></select>
+    <label class="lb" for="mail">Tu correo</label><input class="in" id="mail" type="email" inputmode="email" autocomplete="email" maxlength="120">
+    <label class="lb" for="cla">Clave de residentes <small style="font-weight:400;color:var(--muted)">(la misma de Finanzas)</small></label><input class="in" id="cla" type="password" autocomplete="off">
+    <div class="trampa" aria-hidden="true"><input id="web" tabindex="-1" autocomplete="off"></div>
+    <button class="go" id="go">Quiero recibirlo</button><p class="msg" id="m" hidden></p>
+  </form>
+  <details class="caja"><summary><b>Ya no quiero recibirlo</b></summary>
+    <input class="in" id="mailB" type="email" inputmode="email" placeholder="tu correo" style="margin-top:.8rem"><button class="go sec" id="goB" type="button">Darme de baja</button><p class="msg" id="mB" hidden></p></details>
+</main>
+<footer class="site-footer">
+  <div class="inner">
+    Condominio La Valetta · Lucepolis Coto Club, Milenio III, Querétaro · <a href="contactos.html">Contactos</a> · <a href="bienvenida.html">Bienvenida</a> · <a href="correo.html">Recibe el reporte</a> · <a href="privacidad.html">Aviso de privacidad</a>
+  </div>
+</footer>
+<script src="js/comun.js"></script>
+<script src="js/ventana.js"></script>
+<script>
+(function () {
+  "use strict";
+  const URL_ = "https://script.google.com/macros/s/AKfycbxi1yTin_RY9JwCVT4D6f6YJTJUXPiZ3e3NQdVcuhZPtgaHe-Eluts4Ug1xWoD-2Gtmtg/exec";
+  const $ = id => document.getElementById(id), esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const post = d => fetch(URL_, { method: "POST", body: JSON.stringify(d), headers: { "Content-Type": "text/plain;charset=utf-8" } }).then(r => r.json());
+  const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
+  let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
+  const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
+  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
+  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  if (claveG) $("cla").value = claveG;
+  deptos("dep").then(j => { if (j.correos) { const c = j.correos, p = Math.round(c.con / c.total * 100); $("avance").hidden = false;
+    $("avance").innerHTML = "<b>" + c.con + " de " + c.total + "</b> departamentos ya lo reciben" + '<div style="height:8px;border-radius:999px;background:var(--grid);margin-top:.5rem;overflow:hidden"><i style="display:block;height:100%;width:' + p + '%;background:var(--accent)"></i></div>'; } }).catch(() => { $("dep").innerHTML = '<option value="">Sin conexión; recarga la página</option>'; });
+  $("f").onsubmit = async e => { e.preventDefault(); const b = $("go"); b.disabled = true;
+    const j = await post({ accion: "correo", depto: $("dep").value, correo: $("mail").value.trim(), clave: $("cla").value, web: $("web").value }).catch(() => ({ error: "conexión" }));
+    b.disabled = false; if (j.ok) { recordar($("cla").value); msg("m", true, "✓ Listo. Te llegó un correo de confirmación."); $("mail").value = ""; } else msg("m", false, ERR[j.error] || "No se pudo (" + j.error + ")."); };
+  $("goB").onclick = async () => { const j = await post({ accion: "correo", correo: $("mailB").value.trim(), baja: true }).catch(() => ({ error: "conexión" })); msg("mB", !!j.ok, j.ok ? "✓ Ya no lo recibirás." : ERR[j.error] || "No se pudo."); };
+})();
+</script>
+</body>
+</html>
