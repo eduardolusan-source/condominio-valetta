@@ -71,6 +71,13 @@
 </footer>
 <script src="js/comun.js"></script>
 <script src="js/ventana.js"></script>
-
+<script>
+(function () {
+  const U = "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec", g = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const ir = () => { fetch(U + "?accion=casa&t=" + Date.now()).then(r => r.json()).then(j => { if (j && j.ok && j.ocupados) g("valetta.casa.pub", j); }).catch(() => {});
+    fetch(U + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (j && j.ok && j.deptos) g("valetta.vecinos", j); }).catch(() => {}); };
+  (window.requestIdleCallback || (f => setTimeout(f, 1200)))(ir);
+})();
+</script>
 </body>
 </html>
