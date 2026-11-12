@@ -334,8 +334,12 @@ function cuentaDeptoV_(depto) {
   else { const ini = saldosIniciales_(ss); const k = Object.keys(ini).find(x => x.toUpperCase() === U); saldo = k ? ini[k] : 0; desde = saldo ? "inicio" : ""; }
   const saldoInicial = Math.round(saldo * 100) / 100;
   /* Cada pago cubre primero lo más viejo: un adelanto marca como cubiertos los meses siguientes. */
+  let fuente = "", montoFuente = 0;                      // el último pago que dejó saldo a favor (para explicar «cubierto»)
   meses.forEach(m => {
+    const antes = saldo;
     saldo += m.pagado - m.cuota; m.saldo = Math.round(saldo * 100) / 100; m.enCurso = m.id === hoyId;
+    if (m.pagado > m.cuota + 0.5 && saldo > 0.5) { fuente = m.nombre; montoFuente = m.pagado; }
+    if (m.pagado < m.cuota - 0.5 && antes > 0.5) { m.cubiertoPor = fuente || "saldo a favor anterior"; m.montoCubre = montoFuente; }
     m.estado = saldo >= -0.5 ? (m.pagado >= m.cuota - 0.5 ? "pagado" : "cubierto") : saldo > -m.cuota + 0.5 ? "parcial" : "pendiente";
     m.falta = saldo < -0.5 ? Math.round(Math.min(m.cuota, -saldo) * 100) / 100 : 0;
   });
