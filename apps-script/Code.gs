@@ -62,40 +62,59 @@ function probar() {
 
 /* ============================ LECTURA ============================ */
 
-function armarFinanzas_() {
+function armarFinanzas_(conSaldos) {
   const ss = hoja_();
   const hojas = hojasMes_(ss);
-  if (!hojas.length) throw new Error("No encuentro pestañas de meses (ENERO, FEBRERO…).");
+  const hist = historico_(ss);
+  if (!hojas.length && !Object.keys(hist).length) throw new Error("No encuentro pestañas de meses (ENERO, FEBRERO…).");
 
-  const meses = [];
+  /* Meses futuros (alguien pagó diciembre por adelantado): no se publican ni cobran
+     cuota; sus pagos cuentan como adelanto del mes en curso. */
+  const hoyId = Utilities.formatDate(new Date(), "America/Mexico_City", "yyyy-MM");
+  const meses = [], futuros = [];
   const proyectos = {};
   let unidades = 0, cuota = 0;
   hojas.forEach(h => {
+    /* Un mes ya archivado (pestaña oculta y guardado en Histórico) no se vuelve a leer. */
+    if (hist[h.id] && h.hoja.isSheetHidden()) return;
     const m = leerMes_(h);
     if (!m.capturado) return;
+    if (m.id > hoyId) { futuros.push(m); return; }
     unidades = m.unidades || unidades;
     cuota = m.cuota || cuota;
     m.proyectos.forEach(p => { proyectos[p.nombre.toLowerCase()] = p; });
     meses.push(m);
   });
+  Object.keys(hist).forEach(id => { if (!meses.some(m => m.id === id)) meses.push(Object.assign({ archivado: true }, hist[id].mes, { _saldos: hist[id].saldos })); });
+  meses.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   if (!meses.length) throw new Error("Ninguna pestaña mensual tiene datos todavía.");
+  if (!unidades) unidades = meses[meses.length - 1].unidades;
+  if (!cuota) cuota = meses[meses.length - 1].cuota;
 
-  /* Mora acumulada: saldo por unidad = pagado en el año − cuotas transcurridas.
-     Se calcula aquí, con los cobros por departamento, y SOLO salen las sumas. */
-  const saldos = {};
-  let anioSaldos = null;
-  meses.forEach(m => {
-    if (m.anio !== anioSaldos) { anioSaldos = m.anio; Object.keys(saldos).forEach(k => delete saldos[k]); }
-    m.pagosPorUnidad.forEach(([depto, pagado]) => { saldos[depto] = (saldos[depto] || 0) + pagado - m.cuota; });
-    const vals = Object.keys(saldos).map(k => saldos[k]);
-    const neg = vals.filter(v => v < -0.5), pos = vals.filter(v => v > 0.5);
-    m.mora = {
-      acumulada: redondear_(-neg.reduce((a, b) => a + b, 0)),
-      unidades: neg.length,
-      adelantos: redondear_(pos.reduce((a, b) => a + b, 0)),
-      unidadesAdelanto: pos.length
-    };
+  /* Mora acumulada: saldo por unidad = todo lo pagado − todas las cuotas transcurridas,
+     SIN reiniciar en enero (quien debe diciembre sigue debiéndolo en enero). Se calcula
+     aquí, con los cobros por departamento, y SOLO salen las sumas. Los meses archivados
+     traen su foto de saldos (privada, en la pestaña Histórico) y la cuenta sigue desde ahí. */
+  let saldos = {};
+  meses.forEach((m, i) => {
+    if (m.archivado) { saldos = JSON.parse(JSON.stringify(m._saldos || {})); }
+    else {
+      m.pagosPorUnidad.forEach(([depto, pagado]) => { saldos[depto] = (saldos[depto] || 0) + pagado - m.cuota; });
+      if (i === meses.length - 1) futuros.forEach(f => f.pagosPorUnidad.forEach(([depto, pagado]) => { saldos[depto] = (saldos[depto] || 0) + pagado; }));
+      const vals = Object.keys(saldos).map(k => saldos[k]);
+      const neg = vals.filter(v => v < -0.5), pos = vals.filter(v => v > 0.5);
+      m.mora = {
+        acumulada: redondear_(-neg.reduce((a, b) => a + b, 0)),
+        unidades: neg.length,
+        adelantos: redondear_(pos.reduce((a, b) => a + b, 0)),
+        unidadesAdelanto: pos.length
+      };
+    }
+    if (conSaldos) m._saldos = JSON.parse(JSON.stringify(saldos));
+    else delete m._saldos;
+    m.enCurso = m.id === hoyId;
     delete m.pagosPorUnidad;   // no sale del script
+    delete m.archivado;
   });
 
   return {
@@ -242,12 +261,106 @@ function ligasDrive_(h, fFijos, fVar) {
   return out;
 }
 
+/* ============================ CAMBIO DE AÑO ============================ */
+/* Una sola hoja viva, sin fin: una pestaña por mes ("ENERO 2027" desde el año
+   siguiente). Para que no se haga lenta con los años:
+   - mantenimientoMensual() corre solo el día 25 de cada mes (lo instala instalar()):
+     crea la pestaña del mes siguiente (también enero, cruzando de año) en blanco y con
+     su saldo inicial encadenado al saldo final del mes anterior, y cada 1 de marzo
+     archiva el año anterior.
+   - archivarAnio(anio) guarda en la pestaña "Histórico" las cifras agregadas de cada
+     mes de ese año y la foto privada de saldos por unidad (para que la mora siga
+     contando), y oculta esas pestañas. Nada se borra: para consultar o corregir un mes
+     archivado, se muestra su pestaña (clic derecho → Mostrar) y se corre
+     desarchivarAnio(anio). */
+const HISTORICO = "Histórico";
+
+function historico_(ss) {
+  const h = ss.getSheetByName(HISTORICO);
+  const out = {};
+  if (!h || h.getLastRow() < 2) return out;
+  h.getRange(2, 1, h.getLastRow() - 1, 3).getValues().forEach(f => {
+    const id = String(f[0]).trim();
+    if (!/^\d{4}-\d{2}$/.test(id)) return;
+    try { out[id] = { mes: JSON.parse(f[1]), saldos: JSON.parse(f[2] || "{}") }; } catch (_) { /* renglón dañado: se ignora */ }
+  });
+  return out;
+}
+
+function archivarAnio(anio) {
+  const ss = hoja_();
+  anio = Number(anio) || (new Date().getFullYear() - 1);
+  const d = armarFinanzas_(true);
+  const delAnio = d.meses.filter(m => m.anio === anio);
+  if (!delAnio.length) { aviso_("No hay meses de " + anio + " para archivar."); return; }
+  let h = ss.getSheetByName(HISTORICO);
+  if (!h) {
+    h = ss.insertSheet(HISTORICO);
+    h.getRange(1, 1, 1, 3).setValues([["Mes", "Cifras agregadas (lo que ve el sitio)", "Saldos por unidad al cierre (PRIVADO: no se publica)"]]).setFontWeight("bold");
+    h.setFrozenRows(1);
+  }
+  const ya = historico_(ss);
+  delAnio.forEach(m => {
+    if (ya[m.id]) return;
+    const saldos = m._saldos || {};
+    const limpio = JSON.parse(JSON.stringify(m));
+    delete limpio._saldos; delete limpio.proyectos; delete limpio.enCurso;
+    h.appendRow([m.id, JSON.stringify(limpio), JSON.stringify(saldos)]);
+  });
+  h.getRange("A:A").setNumberFormat("@");
+  hojasMes_(ss).filter(i => i.anio === anio).forEach(i => { try { i.hoja.hideSheet(); } catch (_) { /* ya oculta */ } });
+  try { h.hideSheet(); } catch (_) { /* se queda visible si es la única */ }
+  CacheService.getScriptCache().remove("finanzas");
+  aviso_("Año " + anio + " archivado: " + delAnio.length + " meses en Histórico y sus pestañas ocultas.");
+}
+
+/* Para corregir un año archivado: borra sus renglones de Histórico y muestra sus pestañas. */
+function desarchivarAnio(anio) {
+  const ss = hoja_();
+  anio = Number(anio);
+  const h = ss.getSheetByName(HISTORICO);
+  if (h && h.getLastRow() > 1) {
+    const filas = h.getRange(2, 1, h.getLastRow() - 1, 1).getValues();
+    for (let i = filas.length - 1; i >= 0; i--) if (String(filas[i][0]).indexOf(anio + "-") === 0) h.deleteRow(i + 2);
+  }
+  hojasMes_(ss).filter(i => i.anio === anio).forEach(i => i.hoja.showSheet());
+  CacheService.getScriptCache().remove("finanzas");
+  aviso_("Año " + anio + " vuelve a leerse de sus pestañas.");
+}
+
+/* Crea la pestaña del mes siguiente al de hoy si no existe (en blanco, saldo encadenado). */
+function prepararMesSiguiente() {
+  const ss = hoja_();
+  const hoy = new Date();
+  const sig = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
+  const id = sig.getFullYear() + "-" + ("0" + (sig.getMonth() + 1)).slice(-2);
+  if (hojasMes_(ss).some(i => i.id === id)) return [];
+  return crearMeses_(1, true);
+}
+
+/* Lo corre el disparador del día 25. */
+function mantenimientoMensual() {
+  const creadas = prepararMesSiguiente();
+  const hoy = new Date();
+  if (hoy.getMonth() === 2) {                       // marzo: se archiva el año anterior
+    const anterior = hoy.getFullYear() - 1;
+    if (!Object.keys(historico_(hoja_())).some(id => id.indexOf(anterior + "-") === 0)) archivarAnio(anterior);
+  }
+  if (creadas.length) Logger.log("Pestaña creada: " + creadas.join(", "));
+}
+
+function instalarDisparadores_() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "mantenimientoMensual").forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("mantenimientoMensual").timeBased().onMonthDay(25).atHour(6).inTimezone("America/Mexico_City").create();
+}
+
 /* ============================ INSTALACIÓN ============================ */
 
 /* Crea las pestañas que faltan hasta diciembre del año del último mes. */
 function instalar() {
   const creadas = crearMeses_(12);
   const afinadas = afinarVacios_();
+  instalarDisparadores_();               // día 25: pestaña del mes siguiente (también enero) y archivo anual en marzo
   aviso_((creadas.length ? "Pestañas creadas: " + creadas.join(", ") : "No faltaba ningún mes.") + (afinadas.length ? " · Afinadas: " + afinadas.join(", ") : ""));
 }
 

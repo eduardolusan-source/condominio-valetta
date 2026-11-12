@@ -6,7 +6,13 @@ de Apps Script entrega al sitio las cifras agregadas de cada mes, y
 cada mes: en cuanto la Administración llena la pestaña de un mes, ese mes
 aparece en el sitio (a más tardar cinco minutos después).
 
-## Estado actual (19 de octubre de 2026)
+## Estado actual
+
+12 de noviembre de 2026: nueva implementación con el cambio de año; su URL /exec
+(`…AKfycbxi1yTin…`) es la que usa `js/finanzas.js`. Para próximas versiones, editar ESTA
+implementación (Administrar implementaciones → lápiz → Nueva versión), no crear otra.
+
+### 19 de octubre de 2026
 
 Ya está hecho. El script vive en el proyecto **"La Valetta · Finanzas"** de
 script.google.com (cuenta eduardo.lusan@gmail.com), abre la hoja por su id
@@ -47,8 +53,8 @@ En `js/finanzas.js`, pegar esa URL en `API_URL` (va vacía) y subir el sitio.
 - Abrir la URL del script en el navegador: debe responder un texto JSON que
   empieza con `{"ok":true,"servicio":"valetta-finanzas"…` y trae los meses.
 - Abrir `finanzas.html` con la clave: la etiqueta de arriba debe decir
-  **"Datos en vivo desde la hoja de la Administración · enero a septiembre de 2026"**
-  (con punto verde). Si dice "Copia local", revisar la consola del navegador.
+  **"En vivo desde la hoja de la administración"** (con punto verde que late).
+  Si dice "Copia guardada", revisar la consola del navegador.
 - Para forzar una lectura sin caché: agregar `?fresh=1` a la URL del script.
 
 ## Después
@@ -73,3 +79,16 @@ de gastos por concepto. **Nunca salen los cobros por departamento**: la mora se
 calcula dentro del script (pagado en el año menos cuotas transcurridas, unidad
 por unidad) y solo se publican las sumas y los conteos. Cualquiera con la URL
 del script puede leer esos agregados; la clave del sitio no los protege.
+
+## Cambio de año (12 de noviembre de 2026)
+Una sola hoja viva, sin crear archivos nuevos cada año. Para activarlo: pegar el `Code.gs` nuevo, ejecutar
+**instalar** una vez (instala el disparador) y publicar nueva versión.
+- **La mora ya no se reinicia en enero**: quien debe diciembre sigue apareciendo en la mora de enero.
+- **Día 25 de cada mes** (`mantenimientoMensual`): crea la pestaña del mes siguiente en blanco y con el saldo
+  inicial encadenado; en diciembre crea **ENERO 2027** sola. Se puede correr a mano: `prepararMesSiguiente`.
+- **Cada 1 de marzo** archiva el año anterior (`archivarAnio`): guarda sus cifras en la pestaña **Histórico**
+  (las agregadas que ve el sitio y, aparte, la foto privada de saldos por unidad para que la mora siga
+  contando) y oculta esas pestañas. Así el script no relee años viejos y la hoja no se hace lenta. Nada se
+  borra. Para corregir un mes de un año archivado: `desarchivarAnio(2026)`, corregir, y `archivarAnio(2026)`.
+- Un mes futuro con un pago adelantado no se publica ni cobra cuota: cuenta como adelanto del mes en curso.
+- El sitio muestra todos los años con selector de año.
