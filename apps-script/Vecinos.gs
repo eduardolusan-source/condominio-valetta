@@ -20,7 +20,7 @@
 const KEY_HASH_SITIO = "16740bf13991fe083fbe5820cc8da08a5d88e5a48f44a3cfcc283c27b2797ba7";   // el mismo de js/finanzas.js
 const HOJA_CFG_V = "Config (sitio)", HOJA_CORREOS_V = "Correos", HOJA_RCC_V = "Reservas casa club", HOJA_REP_V = "Reportes";
 const ENC_CORREOS_V = ["Registrado", "Departamento", "Correo", "Activo"];
-const ENC_RCC_V = ["Folio", "Solicitada el", "Día", "Departamento", "Correo", "Estatus", "Nota de la Administración"];
+const ENC_RCC_V = ["Folio", "Solicitada el", "Día", "Departamento", "Correo", "Estatus", "Nota de la Administración", "Quién la pide"];
 const EST_RCC_V = ["Por confirmar", "Confirmada", "Rechazada", "Cancelada"];
 const ZONA_V = "America/Mexico_City";
 const REMITENTE_V = "La Valetta · Administración";
@@ -123,8 +123,10 @@ function folioCasa_(folio) {
   return x ? { ok: true, folio: f, dia: diaV_(x[2]), estatus: String(x[5] || "Por confirmar"), nota: String(x[6] || "") } : { ok: false, error: "no encontrado" };
 }
 function reservarCasaV_(d) {
-  const depto = limpioV_(d.depto, 20), dia = String(d.dia || "").slice(0, 10), correo = String(d.correo || "").trim().toLowerCase();
-  if (!claveOkV_(d.clave)) return { ok: false, error: "clave" };
+  /* Sin clave: puede pedirla el propietario o el inquilino; la Administración confirma cada una. */
+  const depto = limpioV_(d.depto, 20), dia = String(d.dia || "").slice(0, 10), correo = String(d.correo || "").trim().toLowerCase(), nombre = limpioV_(d.nombre, 80);
+  if (!limiteV_("casa_" + depto.toLowerCase(), 6)) return { ok: false, error: "espera" };
+  if (nombre.length < 3) return { ok: false, error: "nombre" };
   if (deptosV_().length && deptosV_().map(x => x.toLowerCase()).indexOf(depto.toLowerCase()) < 0) return { ok: false, error: "departamento" };
   if (!correoOkV_(correo)) return { ok: false, error: "correo" };
   const hoy = Utilities.formatDate(new Date(), ZONA_V, "yyyy-MM-dd"), tope = Utilities.formatDate(new Date(Date.now() + 90 * 864e5), ZONA_V, "yyyy-MM-dd");
@@ -135,15 +137,16 @@ function reservarCasaV_(d) {
   if (fs.filter(f => activaV_(f) && String(f[3]).toLowerCase() === depto.toLowerCase() && diaV_(f[2]) >= hoy).length >= 2) return { ok: false, error: "tope" };
   const props = PropertiesService.getScriptProperties(), n = Number(props.getProperty("folio_casa") || 0) + 1; props.setProperty("folio_casa", String(n));
   const folio = "CC-" + ("000" + n).slice(-4), h = hojaV_(HOJA_RCC_V, ENC_RCC_V), fila = h.getLastRow() + 1;
-  h.getRange(fila, 1, 1, ENC_RCC_V.length).setValues([[folio, new Date(), dia, depto, correo, "Por confirmar", ""]]);
+  if (!String(h.getRange(1, 8).getValue() || "").trim()) h.getRange(1, 8).setValue(ENC_RCC_V[7]).setFontWeight("bold");
+  h.getRange(fila, 1, 1, ENC_RCC_V.length).setValues([[folio, new Date(), dia, depto, correo, "Por confirmar", "", nombre]]);
   h.getRange(fila, 3).setNumberFormat("yyyy-mm-dd");
   try { h.getRange(fila, 6).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(EST_RCC_V, true).setAllowInvalid(true).build()); } catch (_) {}
   const liga = e => (sitioV_() ? sitioV_() + "/casa-admin.html" : ScriptApp.getService().getUrl()) + "?accion=resolverCasa&folio=" + folio + "&e=" + e + "&t=" + firmaV_(folio + "|" + e);
   const boton = (e, txt, color) => '<a href="' + liga(e) + '" style="display:inline-block;margin:6px 8px 6px 0;padding:14px 22px;border-radius:999px;background:' + color + ';color:#fff;text-decoration:none;font-weight:700;font-size:16px">' + txt + "</a>";
   const fechaL = Utilities.formatDate(new Date(dia + "T12:00:00"), ZONA_V, "dd/MM/yyyy"), otras = fs.filter(f => activaV_(f) && diaV_(f[2]) >= hoy).length;
   admonV_().forEach(a => MailApp.sendEmail(a, "🏠 Casa club: depto " + depto + " pide el " + fechaL + " (" + folio + ")",
-    "Depto " + depto + " pide la casa club el " + dia + ". Confirmar: " + liga("Confirmada") + "  ·  Rechazar: " + liga("Rechazada"),
-    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Casa club · ' + folio + '</p><h2 style="margin:6px 0 4px">Depto ' + depto + " pide el " + fechaL + '</h2><p style="color:#52514e;margin:0 0 14px">10:00 a 23:59 h · garantía $3,000 · avisar a: ' + correo + "</p>" +
+    nombre + " (depto " + depto + ") pide la casa club el " + dia + ". Confirmar: " + liga("Confirmada") + "  ·  Rechazar: " + liga("Rechazada"),
+    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Casa club · ' + folio + '</p><h2 style="margin:6px 0 4px">Depto ' + depto + " pide el " + fechaL + '</h2><p style="color:#52514e;margin:0 0 14px"><b>' + nombre + "</b> · " + correo + "<br>10:00 a 23:59 h · garantía $3,000</p>" +
       boton("Confirmada", "✅ Confirmar", "#2e7d32") + boton("Rechazada", "❌ Rechazar", "#b3261e") + '<p style="color:#898781;font-size:13px;margin-top:16px">Un toque basta: se anota en la hoja y al residente le llega el aviso. ' + (otras ? "Hay " + otras + " fecha(s) más apartadas en la pestaña «" + HOJA_RCC_V + "»." : "") + "</p></div>" }));
   MailApp.sendEmail(correo, "Recibimos tu solicitud de casa club " + folio, "Día: " + dia + " (10:00 a 23:59 h)\nEstatus: por confirmar.\n\nLa Administración te confirmará por correo. Garantía: $3,000; se devuelven $2,000 si todo está en orden.\nConsulta tu folio en la página «Casa club» del sitio.", { name: REMITENTE_V });
   return { ok: true, folio: folio };
