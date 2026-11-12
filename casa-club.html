@@ -45,9 +45,9 @@
   </div>
   <form class="caja" id="f" hidden novalidate style="margin-top:1rem">
     <h2 id="diaT" style="font-size:1.15rem;margin:0"></h2>
-    <label class="lb" for="dep">Tu departamento</label><select class="in" id="dep"></select>
+    <label class="lb" for="dep">Departamento</label><select class="in" id="dep"></select>
+    <label class="lb" for="nom">Tu nombre <small style="font-weight:400;color:var(--muted)">(propietario o inquilino; solo lo ve la Administración)</small></label><input class="in" id="nom" maxlength="80" autocomplete="name">
     <label class="lb" for="mail">Correo para avisarte</label><input class="in" id="mail" type="email" inputmode="email" autocomplete="email" maxlength="120">
-    <label class="lb" for="cla">Clave de residentes <small style="font-weight:400;color:var(--muted)">(la misma de Finanzas)</small></label><input class="in" id="cla" type="password" autocomplete="off">
     <div class="trampa" aria-hidden="true"><input id="web" tabindex="-1" autocomplete="off"></div>
     <button class="go" id="go">Pedir este día</button><p class="msg" id="m" hidden></p>
   </form>
@@ -71,7 +71,7 @@
   const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
   let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
   const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
-  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
+  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", nombre: "Escribe tu nombre para que la Administración sepa quién la pide.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
   const VIEJO = '<div class="aviso-v">⚙️ El sitio todavía está conectado a la versión anterior del servicio. La administración del sitio debe publicar la nueva: <b>Implementar → Administrar implementaciones → ✏️ → Nueva versión</b>.</div>';
   const esViejo = j => !!j && j.servicio === "valetta-finanzas";
   const avisarViejo = () => { const m = document.querySelector("main.pg"); if (m && !m.querySelector(".aviso-v")) m.querySelector("h1").insertAdjacentHTML("afterend", VIEJO); };
@@ -79,8 +79,9 @@
   const MS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"], DS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
   const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   const t0 = new Date(); t0.setHours(12, 0, 0, 0); const HOY = iso(t0), TOPE = iso(new Date(t0.getTime() + 90 * 864e5));
-  let mes = new Date(t0.getFullYear(), t0.getMonth(), 1), oc = {}, sel = "";
-  if (claveG) $("cla").value = claveG;
+  let mes = new Date(t0.getFullYear(), t0.getMonth(), 1), oc = {}, sel = "", yo = {};
+  try { yo = JSON.parse(localStorage.getItem("valetta.casa") || "{}") || {}; } catch (e) {}
+  if (yo.nombre) $("nom").value = yo.nombre; if (yo.correo) $("mail").value = yo.correo;
   function pintar() {
     $("mesT").textContent = MS[mes.getMonth()] + " " + mes.getFullYear();
     $("ant").disabled = mes.getFullYear() === t0.getFullYear() && mes.getMonth() === t0.getMonth();
@@ -95,13 +96,14 @@
   $("ant").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); pintar(); };
   $("sig").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() + 1, 1); pintar(); };
   function cargar() { return fetch(URL_ + "?accion=casa&t=" + Date.now()).then(r => r.json()).then(j => { oc = {}; if (esViejo(j)) { avisarViejo(); $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--muted)">El calendario se activa en cuanto se publique la versión nueva.</p>'; return; } (j.ocupados || []).forEach(o => { oc[o.dia] = o.estatus; });
-    if (j.deptos && j.deptos.length) $("dep").innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); pintar(); })
+    if (j.deptos && j.deptos.length) { $("dep").innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); if (yo.depto) $("dep").value = yo.depto; } pintar(); })
     .catch(() => { $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--bad-text)">Sin conexión con la hoja. Intenta en un momento.</p>'; }); }
   $("f").onsubmit = async e => { e.preventDefault(); const b = $("go"); b.disabled = true;
-    const j = await post({ accion: "casa", dia: sel, depto: $("dep").value, correo: $("mail").value.trim(), clave: $("cla").value, web: $("web").value }).catch(() => ({ error: "conexión" }));
+    const j = await post({ accion: "casa", dia: sel, depto: $("dep").value, nombre: $("nom").value.trim(), correo: $("mail").value.trim(), web: $("web").value }).catch(() => ({ error: "conexión" }));
     b.disabled = false;
-    if (j.ok) { recordar($("cla").value); $("f").hidden = true; sel = ""; await cargar();
+    if (j.ok) { try { localStorage.setItem("valetta.casa", JSON.stringify({ nombre: $("nom").value.trim(), correo: $("mail").value.trim(), depto: $("dep").value })); } catch (e) {} $("f").hidden = true; sel = ""; await cargar();
       window.ventana("✓ Pedida · " + j.folio, '<p class="exp">La Administración la confirma y te llega un correo. Guarda tu folio <b>' + esc(j.folio) + '</b>.</p><p class="exp">Al apartar se deja la garantía de $3,000; se devuelven $2,000 cinco días después si todo está en orden.</p>'); }
+    else if (j.error === "clave") { $("m").hidden = false; $("m").className = "msg mal"; $("m").innerHTML = 'La reserva en línea se está actualizando. Por ahora pídela a la Administración: <a href="https://wa.me/524422827829?text=' + encodeURIComponent("Hola, quiero apartar la casa club el " + sel + " (depto " + $("dep").value + ").") + '">WhatsApp</a>.'; }
     else msg("m", false, ERR[j.error] || "No se pudo (" + j.error + ")."); };
   $("goF").onclick = async () => { const f = $("fol").value.trim().toUpperCase(); const j = await fetch(URL_ + "?accion=folio&folio=" + encodeURIComponent(f)).then(r => r.json()).catch(() => ({}));
     if (!j.ok) { $("rF").innerHTML = '<p class="msg mal">Folio no encontrado.</p>'; return; }
