@@ -334,26 +334,26 @@
       const c1 = '<a class="tb-card tb-hero ' + (neg ? "rojo" : "verde") + '" href="#graficas">' +
         '<div class="tb-k">Saldo en caja</div>' +
         '<div class="tb-hero-fila"><div><div class="tb-big" data-cuenta="' + u.saldoFin + '">' + $0(u.saldoFin) + "</div>" +
-        '<div class="tb-estado"><span class="tb-pill ' + (neg ? "mal" : "bien") + '">' + (neg ? "▼ En números rojos" : "● Con saldo a favor") + "</span> al cierre de " + esc(min(u)) + "</div></div>" +
+        '<div class="tb-estado"><span class="tb-pill ' + (neg ? "mal" : "bien") + '">' + (neg ? "▼ En números rojos" : "● Con saldo a favor") + "</span> " + (u.enCurso ? "hoy, con " + esc(min(u)) + " en curso" : "al cierre de " + esc(min(u))) + "</div></div>" +
         '<div class="tb-hero-spark">' + sparkline(M) + "</div></div>" +
         '<div class="tb-d">' + (delta >= 0 ? "Subió " : "Bajó ") + $0(Math.abs(delta)) + (p ? " respecto a " + esc(min(p)) : " en el mes") + " · En " + anio + " " + (resAnio >= 0 ? "ha sobrado " : "ha faltado ") + "<b>" + $0(Math.abs(resAnio)) + "</b></div>" +
         '<span class="tb-mas">Ver cómo ha cambiado ›</span></a>';
 
       /* 2 · El último mes: entró vs salió */
       const c2 = '<a class="tb-card" href="#mes-' + u.id + '">' +
-        '<div class="tb-k">' + esc(u.nombre) + ": ¿alcanzó?</div>" +
+        '<div class="tb-k">' + esc(u.nombre) + (u.enCurso ? " (en curso): así va" : ": ¿alcanzó?") + "</div>" +
         '<div class="tb-duelo"><div class="tb-duelo-f"><span>Entró</span><div class="tb-duelo-p"><i style="--w:' + (ing / tope * 100).toFixed(1) + '%; background:var(--series-1)"></i></div><b>' + $0(ing) + "</b></div>" +
         '<div class="tb-duelo-f"><span>Salió</span><div class="tb-duelo-p"><i style="--w:' + (egr / tope * 100).toFixed(1) + '%; background:var(--series-2)"></i></div><b>' + $0(egr) + "</b></div></div>" +
-        '<div class="tb-veredicto ' + (res >= 0 ? "bien" : "mal") + '">' + (res >= 0 ? "✓ Sobraron " : "✕ Faltaron ") + "<b>" + $0(Math.abs(res)) + "</b></div>" +
+        '<div class="tb-veredicto ' + (res >= 0 ? "bien" : "mal") + '">' + (u.enCurso ? (res >= 0 ? "✓ Va sobrando " : "✕ Va faltando ") : (res >= 0 ? "✓ Sobraron " : "✕ Faltaron ")) + "<b>" + $0(Math.abs(res)) + "</b>" + (u.enCurso ? " · el mes no ha cerrado" : "") + "</div>" +
         '<span class="tb-mas">Ver el mes completo ›</span></a>';
 
       /* 3 · Cobranza */
       const pag = u.cobranza ? u.cobranza.pagaron : 0;
       const c3 = '<a class="tb-card tb-c-anillo" href="#meses">' +
-        '<div class="tb-k">¿Quién pagó su cuota en ' + esc(min(u)) + "?</div>" +
+        '<div class="tb-k">' + (u.enCurso ? "Avance de " + esc(min(u)) + ": ¿quién ya pagó?" : "¿Quién pagó su cuota en " + esc(min(u)) + "?") + "</div>" +
         '<div class="tb-anillo-fila">' + anillo(unidades ? pag / unidades : 0, pag + " de " + unidades + " unidades pagaron") +
         '<div class="tb-anillo-txt"><div class="tb-big" data-cuenta="' + pct(pag, unidades) + '" data-forma="pct">' + pct(pag, unidades) + "%</div><div class='tb-d'><b>" + pag + " de " + unidades + "</b> unidades</div></div></div>" +
-        '<div class="tb-d">' + (pag >= unidades ? "Todas las unidades pagaron este mes." : plural(unidades - pag, "unidad no registró pago", "unidades no registraron pago") + " este mes" + (T.notaCobranza ? "; " + T.notaCobranza : ".")) + "</div>" +
+        '<div class="tb-d">' + (pag >= unidades ? "Todas las unidades pagaron este mes." : u.enCurso ? plural(unidades - pag, "unidad aún no paga", "unidades aún no pagan") + "; el mes sigue corriendo." : plural(unidades - pag, "unidad no registró pago", "unidades no registraron pago") + " este mes" + (T.notaCobranza ? "; " + T.notaCobranza : ".")) + "</div>" +
         '<span class="tb-mas">Ver mes por mes ›</span></a>';
 
       /* 4 · Morosidad */
@@ -452,7 +452,7 @@
       const tarjetas = M.slice().reverse().map(m => {
         const i = ingresosDe(m), e = egresosDe(m), r = i - e;
         return '<a class="tb-mes" href="#mes-' + m.id + '">' +
-          '<div class="tb-mes-cab"><span class="tb-mes-n">' + esc(m.nombre) + '</span><span class="tb-pill ' + (r >= 0 ? "bien" : "mal") + '">' + (r >= 0 ? "sobró " : "faltó ") + $0(Math.abs(r)) + "</span></div>" +
+          '<div class="tb-mes-cab"><span class="tb-mes-n">' + esc(m.nombre) + (m.enCurso ? ' <small class="tb-encurso">en curso</small>' : "") + '</span><span class="tb-pill ' + (r >= 0 ? "bien" : "mal") + '">' + (r >= 0 ? "sobró " : "faltó ") + $0(Math.abs(r)) + "</span></div>" +
           '<div class="tb-mes-b"><span>Entró</span><div class="tb-duelo-p"><i style="--w:' + (i / tope * 100).toFixed(1) + '%; background:var(--series-1)"></i></div><b>' + $k(i) + "</b></div>" +
           '<div class="tb-mes-b"><span>Salió</span><div class="tb-duelo-p"><i style="--w:' + (e / tope * 100).toFixed(1) + '%; background:var(--series-2)"></i></div><b>' + $k(e) + "</b></div>" +
           '<div class="tb-mes-pie"><span>Caja al cierre: <b class="' + (m.saldoFin < 0 ? "neg" : "") + '">' + $0(m.saldoFin) + "</b></span>" +
@@ -528,7 +528,7 @@
           (m.agua ? "<div><dt>Agua: cobrado</dt><dd>" + $0(m.agua.cobrado) + "</dd></div><div><dt>Agua: pagado</dt><dd>" + $0(m.agua.pagado) + "</dd></div>" : "") +
           (m.indicadores || []).map(x => "<div><dt>" + esc(x[0]) + "</dt><dd>" + esc(x[1]) + "</dd></div>").join("") + "</dl></section>" : "";
 
-      return cabecera(m.nombre + " " + m.anio, (m.vivo ? "En vivo desde la hoja de captura." : "")) + nav +
+      return cabecera(m.nombre + " " + m.anio + (m.enCurso ? " · en curso" : ""), (m.enCurso ? "El mes todavía no cierra: las cifras son el avance al día de hoy. " : "") + (m.vivo ? "En vivo desde la hoja de captura." : "")) + nav +
         '<div class="tb-swipe" data-ant="' + (ant ? ant.id : "") + '" data-sig="' + (sig ? sig.id : "") + '">' + tres + flujo +
         '<div class="tb-dos">' + gastos + '<div class="tb-col">' + cob + extra + "</div></div></div>" + nav;
     }
@@ -743,6 +743,9 @@
 
     return {
       actualizar(nuevo) {
+        /* Un mes futuro (alguien pagó diciembre por adelantado) nunca se muestra como mes. */
+        const h = new Date(), hoyId = h.getFullYear() + "-" + String(h.getMonth() + 1).padStart(2, "0");
+        nuevo.meses = nuevo.meses.filter(m => m.id <= hoyId).map(m => Object.assign(m, { enCurso: m.id === hoyId }));
         modelo = nuevo;
         const A = anios();
         let guardado = null;
