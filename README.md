@@ -1,8 +1,12 @@
 # Condominio La Valetta · sitio informativo
 
 Sitio estático (GitHub Pages) para residentes: reglas de convivencia, áreas
-comunes y rendición de cuentas. Cuatro páginas sobre `css/styles.css`:
-`index.html`, `reglamento.html`, `areas-comunes.html` y `finanzas.html`.
+comunes y rendición de cuentas, sobre `css/styles.css`: `index.html`, `reglamento.html`,
+`areas-comunes.html`, `finanzas.html` (con clave), `casa-club.html` (calendario), `correo.html`
+(recibe el reporte), `emergencias.html` (qué hacer si…), `contactos.html`, `bienvenida.html`,
+`privacidad.html` y `llms.txt`. En todas: menú en celular y botón «Aa» (`js/comun.js`) y ventanas
+emergentes (`js/ventana.js`). El servidor de correos, reporte, semáforo y casa club es
+`apps-script/Vecinos.gs` (instalación en `apps-script/INSTALAR.md`).
 
 ## Finanzas en vivo desde Google Sheets
 

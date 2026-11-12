@@ -36,6 +36,8 @@ const FILAS = 120;                   // hasta dónde se lee cada pestaña
 function doGet(e) {
   const p = (e && e.parameter) || {};
   try {
+    /* Correos, casa club y lista de departamentos (archivo Vecinos.gs). */
+    if (p.accion && typeof rutaVecinosGet_ === "function") { const r = rutaVecinosGet_(p); if (r) return texto_(JSON.stringify(r)); }
     const cache = CacheService.getScriptCache();
     if (!p.fresh) {
       const guardado = cache.get("finanzas");

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Casa club · Condominio La Valetta</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="assets/mark.png"><style>
+  .cc-top { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .9rem; } .chip { font: inherit; font-size: .85rem; font-weight: 800; padding: .3rem .8rem; border-radius: 999px; border: 0; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--ink); } .chip.enl { cursor: pointer; text-decoration: underline; }
+  .cal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: .9rem; box-shadow: var(--shadow); }
+  .cal-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; } .cal-h b { font-size: 1.15rem; text-transform: capitalize; }
+  .cal-h button { font: inherit; font-size: 1.4rem; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--page); color: var(--ink); cursor: pointer; } .cal-h button:disabled { opacity: .3; cursor: default; }
+  .cal-s, .cal-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: .3rem; } .cal-s span { text-align: center; font-size: .72rem; font-weight: 800; color: var(--muted); }
+  .d { aspect-ratio: 1; font: inherit; font-weight: 700; font-size: 1rem; border-radius: 12px; border: 1px solid var(--border); background: var(--page); color: var(--ink); cursor: pointer; }
+  .d:disabled { opacity: .35; cursor: default; } .d.hoy { box-shadow: inset 0 0 0 2px var(--accent); } .d.parcial { background: #fff3cd; color: #5a4300; opacity: 1; } .d.lleno { background: #f8d7da; color: #7a1c24; opacity: 1; } .d.sel { background: var(--accent); color: #fff; }
+  .ley { display: flex; flex-wrap: wrap; gap: .3rem .9rem; font-size: .8rem; color: var(--ink-2); margin-top: .6rem; } .ley span::before { content: ""; display: inline-block; width: .8rem; height: .8rem; border-radius: 4px; margin-right: .3rem; vertical-align: -2px; border: 1px solid var(--border); background: var(--page); }
+  .ley .p::before { background: #fff3cd; } .ley .l::before { background: #f8d7da; }
+  details.caja summary { cursor: pointer; } .exp li { margin: .3rem 0; }
+  @media (prefers-color-scheme: dark) { .d.parcial, .ley .p::before { background: #5a4300; color: #ffe08a; } .d.lleno, .ley .l::before { background: #5a1d22; color: #ffb3b9; } .d.sel { color: #0d0d0d; } }</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html"><img src="assets/mark.png" alt=""><span class="logo">LA VALETTA</span><span class="tag">Lucepolis Coto Club</span></a>
+    <nav class="main">
+      <a href="index.html">Inicio</a>
+      <a href="finanzas.html">Finanzas</a>
+      <a href="casa-club.html" class="active">Casa club</a>
+      <a href="reglamento.html">Reglamento</a>
+      <a href="areas-comunes.html">Áreas comunes</a>
+      <a href="emergencias.html">Qué hacer si…</a>
+    </nav>
+  </div>
+</header>
+<main class="pg">
+  <h1>🏠 Casa club</h1>
+  <div class="cc-top"><span class="chip">10:00 a 23:59 h</span><span class="chip">Garantía $3,000</span><button type="button" class="chip enl" id="info">¿Cómo funciona?</button></div>
+  <div class="cal">
+    <div class="cal-h"><button type="button" id="ant" aria-label="Mes anterior">‹</button><b id="mesT"></b><button type="button" id="sig" aria-label="Mes siguiente">›</button></div>
+    <div class="cal-s"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+    <div class="cal-g" id="grid"><p style="grid-column:1/-1;color:var(--muted)">Cargando…</p></div>
+    <div class="ley"><span>libre</span><span class="p">por confirmar</span><span class="l">ocupado</span></div>
+  </div>
+  <form class="caja" id="f" hidden novalidate style="margin-top:1rem">
+    <h2 id="diaT" style="font-size:1.15rem;margin:0"></h2>
+    <label class="lb" for="dep">Tu departamento</label><select class="in" id="dep"></select>
+    <label class="lb" for="mail">Correo para avisarte</label><input class="in" id="mail" type="email" inputmode="email" autocomplete="email" maxlength="120">
+    <label class="lb" for="cla">Clave de residentes <small style="font-weight:400;color:var(--muted)">(la misma de Finanzas)</small></label><input class="in" id="cla" type="password" autocomplete="off">
+    <div class="trampa" aria-hidden="true"><input id="web" tabindex="-1" autocomplete="off"></div>
+    <button class="go" id="go">Pedir este día</button><p class="msg" id="m" hidden></p>
+  </form>
+  <details class="caja" style="margin-top:1rem"><summary><b>🔎 Ya la pedí: ver mi folio</b></summary>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:.5rem;margin-top:.8rem"><input class="in" id="fol" placeholder="CC-0001" autocapitalize="characters"><button class="go" type="button" id="goF" style="margin:0;padding:0 1.2rem">Ver</button></div>
+    <div id="rF"></div></details>
+</main>
+<footer class="site-footer">
+  <div class="inner">
+    Condominio La Valetta · Lucepolis Coto Club, Milenio III, Querétaro · <a href="contactos.html">Contactos</a> · <a href="bienvenida.html">Bienvenida</a> · <a href="correo.html">Recibe el reporte</a> · <a href="privacidad.html">Aviso de privacidad</a>
+  </div>
+</footer>
+<script src="js/comun.js"></script>
+<script src="js/ventana.js"></script>
+<script>
+(function () {
+  "use strict";
+  const URL_ = "https://script.google.com/macros/s/AKfycbxi1yTin_RY9JwCVT4D6f6YJTJUXPiZ3e3NQdVcuhZPtgaHe-Eluts4Ug1xWoD-2Gtmtg/exec";
+  const $ = id => document.getElementById(id), esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const post = d => fetch(URL_, { method: "POST", body: JSON.stringify(d), headers: { "Content-Type": "text/plain;charset=utf-8" } }).then(r => r.json());
+  const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
+  let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
+  const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
+  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
+  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  const MS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"], DS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const t0 = new Date(); t0.setHours(12, 0, 0, 0); const HOY = iso(t0), TOPE = iso(new Date(t0.getTime() + 90 * 864e5));
+  let mes = new Date(t0.getFullYear(), t0.getMonth(), 1), oc = {}, sel = "";
+  if (claveG) $("cla").value = claveG;
+  function pintar() {
+    $("mesT").textContent = MS[mes.getMonth()] + " " + mes.getFullYear();
+    $("ant").disabled = mes.getFullYear() === t0.getFullYear() && mes.getMonth() === t0.getMonth();
+    const lim = new Date(TOPE + "T12:00:00"); $("sig").disabled = mes.getFullYear() * 12 + mes.getMonth() >= lim.getFullYear() * 12 + lim.getMonth();
+    const hueco = (mes.getDay() + 6) % 7, n = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate(); let h = "<span></span>".repeat(hueco);
+    for (let d = 1; d <= n; d++) { const s = iso(new Date(mes.getFullYear(), mes.getMonth(), d)), o = oc[s];
+      h += '<button type="button" class="d' + (s === HOY ? " hoy" : "") + (o ? (o === "ocupado" ? " lleno" : " parcial") : "") + (s === sel ? " sel" : "") + '" data-d="' + s + '"' + (s <= HOY || s > TOPE || o ? " disabled" : "") + ">" + d + "</button>"; }
+    $("grid").innerHTML = h;
+  }
+  $("grid").onclick = e => { const b = e.target.closest("[data-d]"); if (!b || b.disabled) return; sel = b.dataset.d; pintar();
+    const d = new Date(sel + "T12:00:00"); $("diaT").textContent = "📅 " + DS[d.getDay()].replace(/^./, c => c.toUpperCase()) + " " + d.getDate() + " de " + MS[d.getMonth()]; $("f").hidden = false; $("m").hidden = true; $("f").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  $("ant").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1); pintar(); };
+  $("sig").onclick = () => { mes = new Date(mes.getFullYear(), mes.getMonth() + 1, 1); pintar(); };
+  function cargar() { return fetch(URL_ + "?accion=casa&t=" + Date.now()).then(r => r.json()).then(j => { oc = {}; (j.ocupados || []).forEach(o => { oc[o.dia] = o.estatus; });
+    if (j.deptos && j.deptos.length) $("dep").innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); pintar(); })
+    .catch(() => { $("grid").innerHTML = '<p style="grid-column:1/-1;color:var(--bad-text)">Sin conexión con la hoja. Intenta en un momento.</p>'; }); }
+  $("f").onsubmit = async e => { e.preventDefault(); const b = $("go"); b.disabled = true;
+    const j = await post({ accion: "casa", dia: sel, depto: $("dep").value, correo: $("mail").value.trim(), clave: $("cla").value, web: $("web").value }).catch(() => ({ error: "conexión" }));
+    b.disabled = false;
+    if (j.ok) { recordar($("cla").value); $("f").hidden = true; sel = ""; await cargar();
+      window.ventana("✓ Pedida · " + j.folio, '<p class="exp">La Administración la confirma y te llega un correo. Guarda tu folio <b>' + esc(j.folio) + '</b>.</p><p class="exp">Al apartar se deja la garantía de $3,000; se devuelven $2,000 cinco días después si todo está en orden.</p>'); }
+    else msg("m", false, ERR[j.error] || "No se pudo (" + j.error + ")."); };
+  $("goF").onclick = async () => { const f = $("fol").value.trim().toUpperCase(); const j = await fetch(URL_ + "?accion=folio&folio=" + encodeURIComponent(f)).then(r => r.json()).catch(() => ({}));
+    if (!j.ok) { $("rF").innerHTML = '<p class="msg mal">Folio no encontrado.</p>'; return; }
+    $("rF").innerHTML = '<p style="margin:.8rem 0 0"><b>' + esc(j.folio) + "</b> · " + esc(j.dia) + ' · <span class="chip">' + esc(j.estatus) + "</span>" + (j.nota ? "<br><small>" + esc(j.nota) + "</small>" : "") + "</p>" +
+      (/por confirmar|confirmada/i.test(j.estatus) ? '<input class="in" id="mailC" type="email" placeholder="tu correo, para cancelar" style="margin-top:.6rem"><button class="go sec" type="button" id="goC">Cancelar esta reserva</button><p class="msg" id="mC" hidden></p>' : "");
+    const c = $("goC"); if (c) c.onclick = async () => { const r = await post({ accion: "cancelarCasa", folio: j.folio, correo: $("mailC").value.trim() }).catch(() => ({})); msg("mC", !!r.ok, r.ok ? "✓ Cancelada; el día quedó libre." : ERR[r.error] || "No se pudo."); if (r.ok) cargar(); }; };
+  $("info").onclick = () => window.ventana("¿Cómo funciona?", '<ul class="exp"><li>Un evento por día, de 10:00 a 23:59 h.</li><li>Garantía de <b>$3,000</b> al apartar; se quedan $1,000 (limpieza y fondo de la casa club) y se devuelven <b>$2,000</b> cinco días después si todo está en orden.</li><li>Checklist de entrada y salida con la Administración.</li><li>Sin basura al terminar; nada audible en otro depto después de las 00:00 h.</li></ul><div class="acc"><a href="areas-comunes.html#casa-club">Reglas completas</a></div>');
+  cargar();
+})();
+</script>
+</body>
+</html>

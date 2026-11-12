@@ -92,3 +92,24 @@ Una sola hoja viva, sin crear archivos nuevos cada año. Para activarlo: pegar e
   borra. Para corregir un mes de un año archivado: `desarchivarAnio(2026)`, corregir, y `archivarAnio(2026)`.
 - Un mes futuro con un pago adelantado no se publica ni cobra cuota: cuenta como adelanto del mes en curso.
 - El sitio muestra todos los años con selector de año.
+
+## Vecinos: correos, reporte del día 10, semáforo y casa club (12 de noviembre de 2026)
+El proyecto «La Valetta · Finanzas» de script.google.com ahora tiene dos archivos: `Code` y **`Vecinos`**.
+1. Abre el proyecto → `Code` → borra todo → pega `Code.gs` (solo cambia una línea: la ruta a Vecinos).
+2. **+ → Secuencia de comandos** → nómbralo `Vecinos` → pega `Vecinos.gs`.
+3. Guardar → elige la función **instalarVecinos** → **Ejecutar**. Pide permisos nuevos (correo y
+   disparadores): Revisar permisos → Avanzado → Ir a… → Permitir. Crea en la hoja de la Administración las
+   pestañas **Config (sitio)**, **Correos**, **Reservas casa club** y **Reportes**, y programa el día 10 a las
+   9 h y los avisos de casa club cada 30 min.
+4. Implementar → Administrar implementaciones → lápiz → **Nueva versión** (la dirección no cambia).
+5. En **Config (sitio)**: `sitio_url` = la dirección del sitio; `reporte_copia` = quién recibe el kit
+   (lavaletta@gmail.com). `reporte_envio` queda en «no»: así el día 10 solo llega el kit a la Administración.
+   Cuando la Administración esté de acuerdo, cámbialo a «sí» y el reporte sale a los correos registrados.
+6. Probar sin molestar a nadie: Ejecutar **reportePrueba** (llega solo a ti) y **revisar** (semáforo).
+
+Notas
+- Los correos salen de la cuenta dueña del script, con el nombre «La Valetta · Administración».
+- Registrarse y pedir la casa club piden la clave de residentes (la de Finanzas). Si se cambia la clave del
+  sitio, cambia también `KEY_HASH_SITIO` en Vecinos.gs (el mismo hash de `js/finanzas.js`).
+- La Administración confirma la casa club cambiando la columna **Estatus** a Confirmada o Rechazada; el aviso
+  al residente sale solo en menos de 30 minutos.

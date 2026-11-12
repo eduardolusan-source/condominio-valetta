@@ -1,0 +1,23 @@
+# Condominio La Valetta
+
+> Sitio informativo para residentes de La Valetta: 32 departamentos con terraza dentro de Lucepolis Coto Club, Milenio III, Querétaro. Reglas, áreas comunes, casa club y cuentas del edificio (las cuentas piden la clave de residentes). Todo lo público está en cifras agregadas: no identifica a nadie.
+
+## Lo básico
+- Cuota de mantenimiento: $1,100 al mes por departamento.
+- Ruido: desde las 22:00 h sin ruidos molestos; nada audible en otro departamento después de las 00:00 h.
+- Obras: lunes a viernes 8:00–18:00, sábado 8:00–14:00; domingo no.
+- Elevador: no es de carga; ningún mueble sube por él.
+- Casa club: un evento por día, 10:00–23:59 h; garantía de $3,000, se devuelven $2,000 si todo está en orden. Se pide en casa-club.html y la Administración confirma.
+- Multa por incumplir el reglamento: $2,000.
+- Administración: lavaletta@gmail.com · 442 282 78 29.
+
+## Páginas
+- [Inicio](index.html)
+- [Reglamento](reglamento.html): derechos, obligaciones, horarios y multas.
+- [Áreas comunes](areas-comunes.html): casa club, estacionamiento, elevador, terrazas, mascotas, drenaje.
+- [Casa club](casa-club.html): calendario de días apartados.
+- [Qué hacer si…](emergencias.html): fuga, drenaje, luz, elevador, gas, sismo.
+- [Contactos](contactos.html)
+- [Bienvenida](bienvenida.html)
+- [Recibe el reporte](correo.html): registro del correo para el reporte mensual.
+- [Aviso de privacidad](privacidad.html)
