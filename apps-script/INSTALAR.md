@@ -9,7 +9,7 @@ aparece en el sitio (a más tardar cinco minutos después).
 ## Estado actual
 
 12 de noviembre de 2026: nueva implementación con el cambio de año; su URL /exec
-(`…AKfycbxi1yTin…`) es la que usa `js/finanzas.js`. Para próximas versiones, editar ESTA
+(`…AKfycbzU158AMEbF…`) es la que usa `js/finanzas.js`. Para próximas versiones, editar ESTA
 implementación (Administrar implementaciones → lápiz → Nueva versión), no crear otra.
 
 ### 19 de octubre de 2026

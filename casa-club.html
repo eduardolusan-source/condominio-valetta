@@ -65,7 +65,7 @@
 <script>
 (function () {
   "use strict";
-  const URL_ = "https://script.google.com/macros/s/AKfycbxi1yTin_RY9JwCVT4D6f6YJTJUXPiZ3e3NQdVcuhZPtgaHe-Eluts4Ug1xWoD-2Gtmtg/exec";
+  const URL_ = "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec";
   const $ = id => document.getElementById(id), esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const post = d => fetch(URL_, { method: "POST", body: JSON.stringify(d), headers: { "Content-Type": "text/plain;charset=utf-8" } }).then(r => r.json());
   const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
