@@ -322,7 +322,8 @@ function cuentaDeptoV_(depto) {
   const archivados = Object.keys(hist).sort();
   hojasMes_(ss).forEach(h => {
     if (hist[h.id] && h.hoja.isSheetHidden()) return;
-    const m = leerMes_(h); if (!m.capturado) return;
+    const m = leerMes_(h);
+    if (!m.capturado && m.id !== hoyId) return;          // el mes en curso cuenta aunque aún no tenga capturas
     const p = m.pagosPorUnidad.find(x => String(x[0]).toUpperCase() === U), pagado = p ? Number(p[1]) || 0 : 0;
     if (m.id > hoyId) { adelanto += pagado; return; }
     meses.push({ id: m.id, nombre: m.nombre + " " + m.anio, cuota: m.cuota, pagado: Math.round(pagado * 100) / 100 });
@@ -330,8 +331,14 @@ function cuentaDeptoV_(depto) {
   meses.sort((a, b) => a.id < b.id ? -1 : 1);
   const ultArch = archivados.filter(id => !meses.length || id < meses[0].id).pop();
   if (ultArch) { saldo = Number((hist[ultArch].saldos || {})[depto]) || 0; desde = ultArch; }
+  else { const ini = saldosIniciales_(ss); const k = Object.keys(ini).find(x => x.toUpperCase() === U); saldo = k ? ini[k] : 0; desde = saldo ? "inicio" : ""; }
   const saldoInicial = Math.round(saldo * 100) / 100;
-  meses.forEach(m => { saldo += m.pagado - m.cuota; m.saldo = Math.round(saldo * 100) / 100; m.estado = m.pagado >= m.cuota - 0.5 ? "pagado" : m.pagado > 0 ? "parcial" : "pendiente"; m.enCurso = m.id === hoyId; });
+  /* Cada pago cubre primero lo más viejo: un adelanto marca como cubiertos los meses siguientes. */
+  meses.forEach(m => {
+    saldo += m.pagado - m.cuota; m.saldo = Math.round(saldo * 100) / 100; m.enCurso = m.id === hoyId;
+    m.estado = saldo >= -0.5 ? (m.pagado >= m.cuota - 0.5 ? "pagado" : "cubierto") : saldo > -m.cuota + 0.5 ? "parcial" : "pendiente";
+    m.falta = saldo < -0.5 ? Math.round(Math.min(m.cuota, -saldo) * 100) / 100 : 0;
+  });
   saldo += adelanto;
   return { depto: depto, saldoInicial: saldoInicial, archivadoHasta: desde, meses: meses, adelanto: Math.round(adelanto * 100) / 100,
     debe: saldo < -0.5 ? Math.round(-saldo * 100) / 100 : 0, aFavor: saldo > 0.5 ? Math.round(saldo * 100) / 100 : 0, cuota: meses.length ? meses[meses.length - 1].cuota : 1100,

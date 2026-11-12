@@ -126,3 +126,10 @@ Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión** (no hace falt
   renglón de ese departamento. Cada PIN nuevo le llega como aviso. Tras 6 intentos fallidos, ese depto espera una hora.
 - La cuenta usa la misma regla que la mora de Finanzas: todo lo pagado menos todas las cuotas transcurridas, sin
   reiniciar en enero; el mes en curso aparece como «Por pagar» y los meses futuros como adelanto.
+
+### Adeudos de antes de 2026 y meses cubiertos con adelanto (12 de noviembre de 2026)
+- Pestaña opcional **Saldos iniciales** (Ejecutar → `crearSaldosIniciales` una vez): un renglón por depto con lo
+  que debía al iniciar la primera pestaña (en negativo) o lo que tenía a favor (en positivo). La morosidad de
+  Finanzas y «Mi cuenta» parten de ahí. Es privada: el sitio solo publica sumas.
+- «Mi cuenta» aplica cada pago a lo más viejo: un adelanto marca los meses siguientes como «✓ Cubierto», y el mes en
+  curso aparece aunque su pestaña aún no tenga capturas.

@@ -97,7 +97,7 @@ function armarFinanzas_(conSaldos) {
      SIN reiniciar en enero (quien debe diciembre sigue debiéndolo en enero). Se calcula
      aquí, con los cobros por departamento, y SOLO salen las sumas. Los meses archivados
      traen su foto de saldos (privada, en la pestaña Histórico) y la cuenta sigue desde ahí. */
-  let saldos = {};
+  let saldos = saldosIniciales_(hoja_());          // lo que cada depto debía antes de la primera pestaña (opcional)
   meses.forEach((m, i) => {
     if (m.archivado) { saldos = JSON.parse(JSON.stringify(m._saldos || {})); }
     else {
@@ -484,3 +484,23 @@ function num_(v) {
   return isFinite(n) ? (neg ? -n : n) : 0;
 }
 function redondear_(v, dec) { const f = Math.pow(10, dec == null ? 2 : dec); return Math.round(v * f) / f; }
+
+/* Pestaña opcional «Saldos iniciales»: lo que cada depto debía (negativo) o tenía a favor (positivo) antes de
+   la primera pestaña de meses. La mora de Finanzas y «Mi cuenta» parten de ahí. Es PRIVADA: no se publica. */
+const HOJA_SALDOS_INI = "Saldos iniciales";
+function saldosIniciales_(ss) {
+  const h = ss.getSheetByName(HOJA_SALDOS_INI), out = {};
+  if (!h || h.getLastRow() < 2) return out;
+  h.getRange(2, 1, h.getLastRow() - 1, 2).getValues().forEach(f => { const d = String(f[0] || "").trim(), v = num_(f[1]); if (d && v) out[d] = v; });
+  return out;
+}
+/* Ejecutar una vez desde el editor: crea la pestaña con los 32 deptos en 0 para que la Administración la llene. */
+function crearSaldosIniciales() {
+  const ss = hoja_(); if (ss.getSheetByName(HOJA_SALDOS_INI)) { aviso_("La pestaña «" + HOJA_SALDOS_INI + "» ya existe."); return; }
+  const hs = hojasMes_(ss), m = hs.length ? leerMes_(hs[0]) : null, deptos = m ? m.pagosPorUnidad.map(p => p[0]) : [];
+  const h = ss.insertSheet(HOJA_SALDOS_INI);
+  h.getRange(1, 1, 1, 3).setValues([["Depto", "Saldo al iniciar (negativo = debía · positivo = a favor)", "Nota (privada)"]]).setFontWeight("bold"); h.setFrozenRows(1);
+  if (deptos.length) h.getRange(2, 1, deptos.length, 2).setValues(deptos.map(d => [d, 0]));
+  h.getRange(2, 2, Math.max(deptos.length, 1), 1).setNumberFormat("$#,##0.00;-$#,##0.00");
+  aviso_("Pestaña «" + HOJA_SALDOS_INI + "» creada. Escribe en negativo lo que cada depto debía antes de " + (m ? m.nombre + " " + m.anio : "la primera pestaña") + ".");
+}
