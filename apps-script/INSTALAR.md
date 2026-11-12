@@ -73,3 +73,16 @@ de gastos por concepto. **Nunca salen los cobros por departamento**: la mora se
 calcula dentro del script (pagado en el año menos cuotas transcurridas, unidad
 por unidad) y solo se publican las sumas y los conteos. Cualquiera con la URL
 del script puede leer esos agregados; la clave del sitio no los protege.
+
+## Cambio de año (12 de noviembre de 2026)
+Una sola hoja viva, sin crear archivos nuevos cada año. Para activarlo: pegar el `Code.gs` nuevo, ejecutar
+**instalar** una vez (instala el disparador) y publicar nueva versión.
+- **La mora ya no se reinicia en enero**: quien debe diciembre sigue apareciendo en la mora de enero.
+- **Día 25 de cada mes** (`mantenimientoMensual`): crea la pestaña del mes siguiente en blanco y con el saldo
+  inicial encadenado; en diciembre crea **ENERO 2027** sola. Se puede correr a mano: `prepararMesSiguiente`.
+- **Cada 1 de marzo** archiva el año anterior (`archivarAnio`): guarda sus cifras en la pestaña **Histórico**
+  (las agregadas que ve el sitio y, aparte, la foto privada de saldos por unidad para que la mora siga
+  contando) y oculta esas pestañas. Así el script no relee años viejos y la hoja no se hace lenta. Nada se
+  borra. Para corregir un mes de un año archivado: `desarchivarAnio(2026)`, corregir, y `archivarAnio(2026)`.
+- Un mes futuro con un pago adelantado no se publica ni cobra cuota: cuenta como adelanto del mes en curso.
+- El sitio muestra todos los años con selector de año.
