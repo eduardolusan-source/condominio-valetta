@@ -355,3 +355,5 @@ html.vl-grande { font-size: 118%; }
 .msg { font-weight: 700; margin: .7rem 0 0; } .msg.ok { color: var(--good-text); } .msg.mal { color: var(--bad-text); }
 .trampa { position: absolute; left: -9999px; }
 .caja { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1.1rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
+.aviso-v { background: #fff3cd; color: #5a4300; border-radius: 14px; padding: .8rem 1rem; margin: 0 0 1rem; font-size: .95rem; line-height: 1.45; }
+@media (prefers-color-scheme: dark) { .aviso-v { background: #5a4300; color: #ffe08a; } }

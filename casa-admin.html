@@ -44,12 +44,16 @@
   let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
   const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
   const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
-  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
+  const VIEJO = '<div class="aviso-v">⚙️ El sitio todavía está conectado a la versión anterior del servicio. La administración del sitio debe publicar la nueva: <b>Implementar → Administrar implementaciones → ✏️ → Nueva versión</b>.</div>';
+  const esViejo = j => !!j && j.servicio === "valetta-finanzas";
+  const avisarViejo = () => { const m = document.querySelector("main.pg"); if (m && !m.querySelector(".aviso-v")) m.querySelector("h1").insertAdjacentHTML("afterend", VIEJO); };
+  const deptos = sel => fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); $(sel).innerHTML = '<option value="">No disponible todavía</option>'; return {}; } if (j.ok && j.deptos.length) $(sel).innerHTML = '<option value="">Elige…</option>' + j.deptos.map(d => "<option>" + esc(d) + "</option>").join(""); return j; });
   const q = new URLSearchParams(location.search), DS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"], MS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   const largo = s => { const d = new Date(s + "T12:00:00"); return isNaN(d) ? s : DS[d.getDay()] + " " + d.getDate() + " de " + MS[d.getMonth()]; };
   const pon = (ic, t, sub) => { $("r").innerHTML = '<div style="font-size:3.2rem">' + ic + '</div><h1 style="font-size:1.5rem;margin:.3rem 0">' + esc(t) + '</h1><p class="sub" style="margin:0">' + sub + "</p>"; };
   if (q.get("accion") !== "resolverCasa") { pon("🤔", "Liga incompleta", "Usa el botón del correo."); return; }
   fetch(URL_ + "?" + q.toString()).then(r => r.json()).then(j => {
+    if (esViejo(j)) return pon("⚙️", "Falta publicar la versión nueva", "En el editor del script: Implementar → Administrar implementaciones → ✏️ → Nueva versión. Luego toca otra vez el botón del correo.");
     if (j.ok) pon(j.estatus === "Confirmada" ? "✅" : "❌", (j.estatus === "Confirmada" ? "Confirmada" : "Rechazada") + " · " + j.folio, "Depto <b>" + esc(j.depto) + "</b> · " + esc(largo(j.dia)) + "<br>Al residente ya le llegó el aviso por correo.");
     else pon("⚠️", { liga: "La liga no es válida", cancelada: "El residente la canceló", ocupado: "Ese día ya está confirmado para otro depto", "no encontrado": "No encontré el folio" }[j.error] || "No se pudo", j.error === "cancelada" ? "La fecha quedó libre." : "Revisa la pestaña «Reservas casa club» de la hoja.");
   }).catch(() => pon("📡", "Sin conexión", "Intenta de nuevo en un momento."));
