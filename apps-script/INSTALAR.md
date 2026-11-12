@@ -6,7 +6,13 @@ de Apps Script entrega al sitio las cifras agregadas de cada mes, y
 cada mes: en cuanto la Administración llena la pestaña de un mes, ese mes
 aparece en el sitio (a más tardar cinco minutos después).
 
-## Estado actual (19 de octubre de 2026)
+## Estado actual
+
+12 de noviembre de 2026: nueva implementación con el cambio de año; su URL /exec
+(`…AKfycbxi1yTin…`) es la que usa `js/finanzas.js`. Para próximas versiones, editar ESTA
+implementación (Administrar implementaciones → lápiz → Nueva versión), no crear otra.
+
+### 19 de octubre de 2026
 
 Ya está hecho. El script vive en el proyecto **"La Valetta · Finanzas"** de
 script.google.com (cuenta eduardo.lusan@gmail.com), abre la hoja por su id

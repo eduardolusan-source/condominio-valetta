@@ -13,7 +13,9 @@
      Si el script no responde, se muestra la copia de js/data.js.
      REGLA: lo que entrega el script lo puede leer cualquiera con la URL; la
      clave del sitio no lo protege. Por eso solo viajan agregados. */
-  const API_URL = "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec";
+  /* Implementación publicada el 12 nov 2026 (cambio de año y archivo anual). La anterior
+     (…AKfycbzU158…/exec) quedó con el script viejo: si algún día se borra, nada se rompe. */
+  const API_URL = "https://script.google.com/macros/s/AKfycbxi1yTin_RY9JwCVT4D6f6YJTJUXPiZ3e3NQdVcuhZPtgaHe-Eluts4Ug1xWoD-2Gtmtg/exec";
 
   /* ---------- Portón de acceso ---------- */
   const KEY_HASH = "16740bf13991fe083fbe5820cc8da08a5d88e5a48f44a3cfcc283c27b2797ba7";
