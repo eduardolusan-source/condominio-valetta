@@ -42,7 +42,7 @@
 <!-- Contenido protegido: lo dibuja js/tablero.js -->
 <main id="content" hidden>
   <div id="tablero"></div>
-  <section class="nc" id="noche" hidden aria-label="Cuántos departamentos están al corriente"></section>
+  <section class="nc" id="noche" hidden aria-label="Cuántos departamentos están al corriente" style="margin:1.2rem 0 0;padding:0"></section>
 </main>
 
 <footer class="site-footer">
@@ -60,8 +60,9 @@
 /* El edificio de noche: solo en la portada de Finanzas. */
 (function () {
   const caja = document.getElementById("noche");
-  const ver = () => { const h = location.hash.replace(/^#/, ""); caja.style.display = h === "" || h === "inicio" ? "" : "none"; };
-  ver(); window.addEventListener("hashchange", ver);
+  /* Va dentro de la portada del tablero, justo antes de «Consulta a detalle». */
+  const ver = () => { const h = document.querySelector('#tablero [data-hueco="antes-detalle"]'); if (h) { h.appendChild(caja); caja.style.display = ""; } else caja.style.display = "none"; };
+  document.getElementById("tablero").addEventListener("tablero:pintado", ver); ver();
   Noche.montar(caja, { nombre: "LA VALETTA", columnas: 4, api: "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec", llave: "valetta.noche" });
 })();
 </script>
