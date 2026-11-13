@@ -133,3 +133,15 @@ Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión** (no hace falt
   Finanzas y «Mi cuenta» parten de ahí. Es privada: el sitio solo publica sumas.
 - «Mi cuenta» aplica cada pago a lo más viejo: un adelanto marca los meses siguientes como «✓ Cubierto», y el mes en
   curso aparece aunque su pestaña aún no tenga capturas.
+
+## Reporte del día 10 visual (13 de noviembre de 2026)
+Ya pegado en el proyecto **La Valetta · Finanzas** (Vecinos.gs) y probado con `reportePrueba`. Solo cambia la
+sección «reporte mensual» de `Vecinos.gs`; el envío, los candados y `reporte_envio` siguen igual.
+- El correo es una carta corta y visual, igual a la de Las Misiones: el edificio de noche con una ventana encendida
+  por cada depto que pagó su cuota (se barajan con el mes: no son deptos reales), la frase del mes («La caja bajó…»,
+  «La caja creció…», «¡Mes verde!» y, si la caja está en números rojos, se dice), la caja en barras (con la casa club
+  como ingreso), en qué se fue la cuota por rubro con los tres gastos más grandes, un dato del mes y botones a Mi
+  cuenta y Finanzas. Solo tablas y colores: se ve igual en Gmail, Outlook y el celular.
+- Asunto con gancho: «Las cuentas de octubre · la caja bajó $7,827 · La Valetta». El texto para WhatsApp del kit
+  también cambió.
+- Un concepto que en la hoja quedó como fecha sale como «Gasto sin concepto» (en octubre de 2026 hay uno de $2,000).

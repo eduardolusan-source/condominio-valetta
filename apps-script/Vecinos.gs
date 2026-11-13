@@ -215,33 +215,264 @@ function revisar() {
 function textoSalud_(s) { const p = s.puntos.filter(x => x.nivel !== "info"); return (p.length ? p.map(x => (x.nivel === "rojo" ? "🔴 " : "🟡 ") + x.texto).join("\n") : "🟢 Todo cuadra.") + "\n" + s.puntos.filter(x => x.nivel === "info").map(x => "ℹ️ " + x.texto).join("\n"); }
 
 /* ------------------------------- reporte mensual ------------------------------- */
+/* El correo del día 10 es una carta corta y visual que se lee en un minuto: el edificio de noche con una ventana
+   encendida por cada depto que pagó su cuota (se barajan con el mes: no son deptos reales), cómo se movió la caja,
+   en qué se fue la cuota, un dato del mes y las ligas a Mi cuenta y Finanzas. Solo tablas y colores, sin
+   imágenes: se ve igual en Gmail, Outlook y el celular. Las cifras son siempre agregadas. */
 const $V = v => (v < 0 ? "−$" : "$") + Math.round(Math.abs(v)).toLocaleString("es-MX");
+const MARCA_V = { nombre: "La Valetta", acento: "#6f766a", oscuro: "#545a4f", suave: "#e3e3db", notaCuota: "" };
+/* Rubro · cómo se reconoce en proveedor y concepto · color · ícono. El orden importa: gana el primero que coincide. */
+const RUBROS_V = [
+  ["Teléfono, internet y app", /telmex|telcel|condovive|plataforma|internet/i, "#7a8a99", "📶"],
+  ["Luz de áreas comunes", /\bluz\b|cfe/i, "#e0a400", "💡"],
+  ["Elevador", /elevador|schindler/i, "#8a6bbf", "↕️"],
+  ["Alberca", /alberca/i, "#2f9fd0", "🏊"],
+  ["Jardinería", /jard|poda|maleza/i, "#5c9e5a", "🌿"],
+  ["Limpieza", /limpi/i, "#3f8f7a", "🧹"],
+  ["Vigilancia", /vigilan|seguridad|guardia/i, "#5b6b8c", "🛡️"],
+  ["Administración", /administra|edificare/i, "#1d3f63", "🗂️"],
+  ["Mantenimiento y reparaciones", /manten|mtto|manto|repar|port[oó]n|ferreter|pintura|flotador|cerca|sensor|bomba|plomer|herrer/i, "#c4744f", "🔧"]
+];
+const OTROS_V = ["Otros gastos", "#a9a397", "🧾"], CAJA_V = ["Quedó para la caja", "#d9c08a", "🐷"];
+const RCV = { tinta: "#0b0b0b", gris: "#52514e", suave: "#898781", linea: "#e1e0d9", fina: "#efeee8", papel: "#f9f9f7",
+  noche: "#1b2238", suelo: "#24304a", muro: "#2c3a5c", cornisa: "#3b4a6b", luz: "#ffcb45", luz2: "#e0a400", apagada: "#3b4a6b", apagada2: "#323f5c",
+  oro: "#c08a3e", crema: "#fbf3e2", verde: "#2f7d32", verdeClaro: "#e3f2e6", rojo: "#b3261e", rojoClaro: "#fde7e6", coral: "#e8735a",
+  agua: "#2f7fb5", aguaClaro: "#e6f3fb", cielo: "#a9c3dd", hielo: "#d6e2ee" };
+const RFV = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", RGV = "Georgia,'Times New Roman',serif";
+const MESES_V = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/* La Valetta: detalle = [concepto, monto, liga]. La casa club entra como ingreso. */
 function datosReporte_(id) {
   const d = armarFinanzas_(), m = d.meses.find(x => x.id === id);
   if (!m || !m.detalle) return null;
-  const ing = m.ingresos.manto + m.ingresos.agua + m.ingresos.casaClub, egr = m.egresos.fijos + m.egresos.variables;
-  const gastos = m.detalle.fijos.concat(m.detalle.variables).sort((a, b) => b[1] - a[1]);
-  return { m: m, ing: ing, egr: egr, gastos: gastos, mes: m.nombre + " " + m.anio, proyectos: d.proyectos || [] };
+  const g = x => ({ texto: conceptoV_(x[0]), monto: Number(x[1]) || 0 });
+  const comunes = m.detalle.fijos.concat(m.detalle.variables).map(g);
+  return armarReporteV_(d, m, {
+    ing: [["cuotas", m.ingresos.manto], ["agua", m.ingresos.agua || 0], ["casa club", m.ingresos.casaClub || 0]],
+    egr: [["gastos fijos", m.egresos.fijos], ["variables", m.egresos.variables]],
+    comunes: comunes, todos: comunes, agua: null
+  });
 }
+/* Un concepto que en la hoja quedó como fecha («Fri Oct 23 2026…») se muestra como «Gasto sin concepto». */
+function conceptoV_(s) { s = String(s == null ? "" : s).replace(/\s+/g, " ").trim(); return /^(mon|tue|wed|thu|fri|sat|sun) \w{3} \d{1,2} \d{4}/i.test(s) || !s ? "Gasto sin concepto" : s; }
+/* Las cifras del mes, ya agregadas, en un solo objeto para el correo y el texto de WhatsApp. */
+function armarReporteV_(d, m, x) {
+  const U = m.unidades || d.unidades || 1, suma = l => l.reduce((s, p) => s + (Number(p[1]) || 0), 0), ing = suma(x.ing), egr = suma(x.egr);
+  const tot = {}; let otros = 0;
+  x.comunes.forEach(g => { const r = RUBROS_V.find(r => r[1].test(g.texto)); if (r) tot[r[0]] = (tot[r[0]] || 0) + g.monto; else otros += g.monto; });
+  let rubros = RUBROS_V.filter(r => tot[r[0]] > 0.5).map(r => [r[0], tot[r[0]] / U, r[2], r[3], tot[r[0]]]).sort((a, b) => b[4] - a[4]);
+  if (rubros.length > 6) { rubros.slice(5).forEach(r => { otros += r[4]; }); rubros = rubros.slice(0, 5); }
+  if (otros > 0.5) rubros.push([OTROS_V[0], otros / U, OTROS_V[1], OTROS_V[2], otros]);
+  const delAnio = d.meses.filter(y => y.anio === m.anio && y.id <= m.id);
+  const resAnio = delAnio.reduce((s, y) => s + (y.saldoFin - y.saldoIni), 0);
+  let correos = null; try { correos = correosCuenta_(); } catch (e) { /* sin hoja de correos */ }
+  return {
+    m: m, ing: ing, egr: egr, gastos: x.todos.map(g => [g.texto, g.monto]).sort((a, b) => b[1] - a[1]), mes: m.nombre + " " + m.anio, proyectos: d.proyectos || [],
+    id: m.id, mesMin: String(m.nombre).toLowerCase(), anio: m.anio, mesNum: parseInt(m.id.slice(5), 10), unidades: U, cuota: m.cuota || d.cuota || 0,
+    saldoIni: m.saldoIni, saldoFin: m.saldoFin, res: ing - egr, partesIng: x.ing, partesEgr: x.egr,
+    pagaron: m.cobranza ? m.cobranza.pagaron : 0, mora: m.mora || null, rubros: rubros, costoUnidad: rubros.reduce((s, r) => s + r[1], 0),
+    agua: x.agua || null, correos: correos, resAnio: resAnio, mesesAnio: delAnio.length, base: sitioV_()
+  };
+}
+function escV_(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function mayV_(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+function mesNomV_(id) { return MESES_V[parseInt(String(id).slice(5), 10) - 1] || String(id); }
+function urlV_(k, p) { return k.base ? k.base + "/" + p : ""; }
+function listaV_(p) { return p.length > 1 ? p.slice(0, -1).join(", ") + " y " + p[p.length - 1] : p.join(""); }
+function partesV_(l) { return l.filter(p => p[1] > 0.5).map(p => p[0] + " " + $V(p[1])).join(" · "); }
+/* La historia del mes en una línea: lo primero que se lee. Si la caja está en números rojos, se dice. */
+function historiaV_(k) {
+  const U = k.unidades, verde = k.pagaron >= U, rojo = k.saldoFin < -0.5, fin = $V(k.saldoFin);
+  const titulo = verde ? "¡Mes verde! Pagaron los " + U + " deptos" : k.res >= 0 ? (rojo ? "La caja se recuperó " : "La caja creció ") + $V(k.res) : "La caja bajó " + $V(-k.res);
+  const bajada = rojo ? (verde ? "Aun así, la caja sigue en números rojos: cerró " : "Sigue en números rojos: cerró ") + k.mesMin + " en " + fin + "."
+    : (verde ? "Y la caja cerró " : "Cerró ") + k.mesMin + " con " + fin + (verde ? "." : " en la caja.");
+  return {
+    titulo: titulo, bajada: bajada,
+    bajadaHtml: escV_(bajada).replace(escV_(fin), '<b style="white-space:nowrap;color:' + (rojo ? "#ffb4a8" : RCV.luz) + '">' + escV_(fin) + "</b>"),
+    corto: verde ? "¡mes verde!" : k.res >= 0 ? (rojo ? "la caja se recupera" : "la caja creció " + $V(k.res)) : "la caja bajó " + $V(-k.res),
+    ventanas: verde ? "Las " + U + " ventanas encendidas: todos pagaron su cuota de " + k.mesMin + "."
+      : k.pagaron + " de " + U + " ventanas encendidas: cada luz es un depto que ya pagó su cuota de " + k.mesMin + "."
+  };
+}
+function asuntoV_(k) { return "Las cuentas de " + k.mesMin + " · " + historiaV_(k).corto + " · " + MARCA_V.nombre; }
+function moraTxtV_(k) { return !k.mora ? "" : k.mora.acumulada > 0.5 ? "Cuotas atrasadas: " + $V(k.mora.acumulada) + " de " + k.mora.unidades + (k.mora.unidades === 1 ? " depto" : " deptos") : "Nadie tiene cuotas atrasadas"; }
+/* Una ventana por depto; las encendidas son los que pagaron, barajadas con el mes como semilla. */
+function ventanasV_(k) {
+  const n = k.unidades, on = Math.max(0, Math.min(n, k.pagaron)), v = [];
+  for (let i = 0; i < n; i++) v.push(i < on);
+  let s = semillaV_(k.id);
+  for (let i = n - 1; i > 0; i--) { s = (s * 16807) % 2147483647; const j = s % (i + 1), t = v[i]; v[i] = v[j]; v[j] = t; }
+  return v;
+}
+function semillaV_(t) { let s = 7; String(t).split("").forEach(c => { s = (s * 31 + c.charCodeAt(0)) % 2147483647; }); return s || 7; }
+/* La cuota partida en rubros (por depto) más lo que quedó para la caja, con su porcentaje de la barra. */
+function segmentosV_(k) {
+  const seg = k.rubros.map(r => [r[0], r[1], r[2], r[3]]), sobra = k.cuota - k.costoUnidad;
+  if (k.cuota > 0 && sobra > 0.5) seg.push([CAJA_V[0], sobra, CAJA_V[1], CAJA_V[2]]);
+  const base = seg.reduce((a, s) => a + s[1], 0) || 1;
+  let acum = 0;
+  seg.forEach((s, i) => { s[4] = i === seg.length - 1 ? Math.max(0, 100 - acum) : Math.max(1, Math.round(s[1] / base * 100)); acum += s[4]; });
+  return { seg: seg, sobra: sobra };
+}
+/* Un dato distinto cada mes. Mientras menos de la mitad reciba el correo, invita a registrarse. */
+function datoMesV_(k) {
+  const reg = urlV_(k, "correo.html");
+  if (k.correos && k.correos.total && k.correos.con < k.correos.total / 2 && reg)
+    return { texto: "Solo " + k.correos.con + " de " + k.correos.total + " deptos reciben este reporte por correo. Si tu vecino no lo recibe, pásale esta liga para registrarse (con la clave de residentes): " + reg,
+      html: "Solo <b>" + k.correos.con + " de " + k.correos.total + "</b> deptos reciben este reporte por correo. Si tu vecino no lo recibe, pásale " +
+        '<a href="' + reg + '" style="color:#8a5a12;font-weight:bold">esta liga para registrarse</a> (con la clave de residentes).' };
+  const op = [], r = k.rubros.filter(x => x[0] !== OTROS_V[0])[0];
+  if (r) op.push(r[0] + " costó " + $V(r[4]) + " en " + k.mesMin + ": " + $V(r[1]) + " por depto, unos " + $V(r[1] / 30) + " al día.");
+  if (k.cuota) op.push("Tu cuota de " + $V(k.cuota) + " al mes son unos " + $V(k.cuota / 30) + " al día, y con eso se sostiene todo el edificio.");
+  if (k.agua && k.agua.pipas) op.push("En " + k.mesMin + " llegaron " + k.agua.pipas + " pipas de agua: " + (k.agua.pipas >= 30 ? "más de una al día." : "una cada " + Math.max(1, Math.round(30 / k.agua.pipas)) + " días."));
+  if (k.mesesAnio >= 2) op.push("En lo que va de " + k.anio + ", la caja " + (k.resAnio >= 0 ? "suma " + $V(k.resAnio) + " a favor." : "lleva " + $V(-k.resAnio) + " en contra."));
+  const t = op[(k.mesNum + k.anio) % op.length];
+  return t ? { texto: t, html: escV_(t) } : null;
+}
+
 function textoWaV_(k) {
-  const m = k.m, l = ["🏢 *La Valetta · cuentas de " + k.mes + "*", "", "💰 Saldo al cierre: *" + $V(m.saldoFin) + "*", "⬆️ Entró: " + $V(k.ing) + "  ·  ⬇️ Salió: " + $V(k.egr),
-    "✅ Pagaron su cuota: " + m.cobranza.pagaron + " de " + m.unidades];
-  if (m.mora && m.mora.acumulada > 0.5) l.push("⏳ Cuotas atrasadas: " + $V(m.mora.acumulada) + " (" + m.mora.unidades + " deptos)");
-  if (k.gastos.length) l.push("", "En qué se fue:", ...k.gastos.slice(0, 4).map(g => "• " + g[0] + ": " + $V(g[1])));
-  l.push("", "Detalle y comprobantes en el sitio (Finanzas, con la clave de residentes)" + (sitioV_() ? ": " + sitioV_() + "/finanzas.html" : "."), "_Cifras agregadas: no se identifica a nadie._");
+  const h = historiaV_(k), dato = datoMesV_(k);
+  const l = ["🏢 *" + MARCA_V.nombre + " · cuentas de " + k.mesMin + " " + k.anio + "*", "", (k.pagaron >= k.unidades ? "🎉 " : "") + "*" + h.titulo + "*", ""];
+  l.push("💰 En la caja: *" + $V(k.saldoFin) + "*" + (k.saldoFin < -0.5 ? " (números rojos)" : ""));
+  l.push("📥 Entró " + $V(k.ing) + " · 📤 Salió " + $V(k.egr));
+  l.push(k.res >= 0 ? "✅ Sobraron " + $V(k.res) : "↘️ Faltaron " + $V(-k.res));
+  l.push("💡 " + k.pagaron + " de " + k.unidades + " deptos pagaron su cuota");
+  if (k.mora && k.mora.acumulada > 0.5) l.push("⏳ " + moraTxtV_(k));
+  if (k.agua && k.agua.pagado > 0.5) l.push("💧 Pipas de agua: " + $V(k.agua.pagado) + (k.agua.pipas ? " (" + k.agua.pipas + " pipas)" : "") + " · derrama cobrada " + $V(k.agua.cobrado));
+  if (dato) l.push("", "✨ " + dato.texto);
+  if (k.base) l.push("", "Cómo va tu depto 👇", urlV_(k, "micuenta.html"), "", "Todas las cuentas y comprobantes (con la clave de residentes) 👇", urlV_(k, "finanzas.html"));
+  l.push("", "_Cifras agregadas: no se identifica a nadie._");
   return l.join("\n");
 }
+
+/* ---------- Correo a los residentes ---------- */
+function seccionV_(html, primera) {
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:24px 22px;font-family:' + RFV + (primera ? "" : ";border-top:1px solid " + RCV.fina) + '">' + html + "</td></tr></table>";
+}
+function tituloV_(t, sub) {
+  return '<div style="font-family:' + RGV + ";font-size:22px;line-height:1.25;color:" + RCV.tinta + '">' + t + "</div>" +
+    (sub ? '<div style="font-family:' + RFV + ";font-size:14px;line-height:1.55;color:" + RCV.gris + ';margin-top:5px">' + sub + "</div>" : "");
+}
+function edificioV_(k) {
+  const v = ventanasV_(k), n = v.length, cols = n <= 16 ? 4 : n <= 25 ? 5 : n <= 40 ? (n % 4 === 0 && n <= 32 ? 4 : 5) : Math.ceil(Math.sqrt(n * 0.6));
+  const filas = Math.ceil(n / cols), w = n > 24 ? 17 : 22, hh = n > 24 ? 17 : 23, pad = n > 24 ? 4 : 5;
+  let pisos = "";
+  for (let f = 0; f < filas; f++) {
+    pisos += "<tr>";
+    for (let c = 0; c < cols; c++) {
+      const i = f * cols + c, on = v[i];
+      pisos += '<td style="padding:0 ' + pad + "px " + (pad * 2) + 'px">' + (i < n
+        ? '<div style="width:' + w + "px;height:" + hh + "px;background:" + (on ? RCV.luz : RCV.apagada) + ";border-bottom:4px solid " + (on ? RCV.luz2 : RCV.apagada2) + ';border-radius:3px 3px 1px 1px;font-size:0;line-height:0">&nbsp;</div>'
+        : '<div style="width:' + w + "px;height:" + (hh + 4) + 'px;font-size:0;line-height:0">&nbsp;</div>') + "</td>";
+    }
+    pisos += "</tr>";
+  }
+  const edificio = '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate">' +
+    '<tr><td style="background:' + RCV.cornisa + ';height:9px;border-radius:5px 5px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>' +
+    '<tr><td style="background:' + RCV.muro + ';padding:13px 10px 2px"><table role="presentation" cellpadding="0" cellspacing="0" border="0">' + pisos + "</table></td></tr>" +
+    '<tr><td align="center" style="background:' + RCV.muro + ';padding:0;font-size:0;line-height:0"><div style="width:26px;height:30px;margin:0 auto;background:' + RCV.oro + ';border-radius:5px 5px 0 0;font-size:0;line-height:0">&nbsp;</div></td></tr></table>';
+  return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto"><tr>' +
+    '<td valign="bottom" style="font-size:34px;line-height:1;padding:0 4px 0 0">🌳</td><td valign="bottom">' + edificio + "</td>" +
+    '<td valign="bottom" style="font-size:26px;line-height:1;padding:0 0 0 4px">🌳</td></tr></table>';
+}
+function heroV_(k, h) {
+  const mora = !k.mora ? "" : k.mora.acumulada > 0.5
+    ? '<div style="margin-top:10px"><span style="display:inline-block;background:#4a2b31;color:#ffd7d2;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700">⏳ ' + escV_(moraTxtV_(k)) + "</span></div>"
+    : '<div style="margin-top:10px"><span style="display:inline-block;background:#23402e;color:#c9f0d3;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700">Nadie tiene cuotas atrasadas 🎉</span></div>';
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:' + RCV.noche + ';border-radius:20px 20px 0 0">' +
+    '<tr><td style="padding:22px 22px 0;font-family:' + RFV + '">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+        '<td style="font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:' + RCV.cielo + '">' + escV_(MARCA_V.nombre) + " · " + mayV_(k.mesMin) + " " + k.anio + "</td>" +
+        '<td align="right" style="font-size:24px;line-height:1">🌙</td></tr></table>' +
+      '<div style="font-family:' + RGV + ';font-size:30px;line-height:1.15;color:#ffffff;margin-top:10px">' + escV_(h.titulo) + "</div>" +
+      '<div style="font-size:16px;line-height:1.5;color:' + RCV.hielo + ';margin-top:8px">' + h.bajadaHtml + "</div></td></tr>" +
+    '<tr><td align="center" style="padding:20px 10px 0;font-family:' + RFV + ";font-size:13px;letter-spacing:10px;color:" + RCV.cielo + '">✦&nbsp;✧&nbsp;✦</td></tr>' +
+    '<tr><td align="center" style="padding:6px 10px 0">' + edificioV_(k) + "</td></tr>" +
+    '<tr><td align="center" style="background:' + RCV.suelo + ';padding:14px 22px 20px;font-family:' + RFV + '">' +
+      '<div style="font-size:14px;line-height:1.5;color:' + RCV.hielo + '">' + escV_(h.ventanas) + "</div>" + mora + "</td></tr></table>";
+}
+function cajaV_(k) {
+  const max = Math.max(k.ing, k.egr, 1);
+  const fila = (et, v, color, sub) => '<tr><td style="padding:12px 0 0">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr>' +
+      '<td width="58" style="width:58px;font-family:' + RFV + ";font-size:14px;color:" + RCV.gris + '">' + et + "</td>" +
+      '<td><table role="presentation" width="' + Math.max(4, Math.round(v / max * 100)) + '%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:' + color + ';height:16px;border-radius:8px;font-size:0;line-height:0">&nbsp;</td></tr></table></td>' +
+      '<td width="100" align="right" style="width:100px;font-family:' + RFV + ";font-size:17px;font-weight:800;color:" + RCV.tinta + ';white-space:nowrap">' + $V(v) + "</td></tr></table>" +
+    (sub ? '<div style="font-family:' + RFV + ";font-size:12px;line-height:1.4;color:" + RCV.suave + ';margin:4px 0 0 58px">' + sub + "</div>" : "") + "</td></tr>";
+  const res = k.res >= 0
+    ? '<span style="display:inline-block;background:' + RCV.verdeClaro + ';color:#1d5a2a;border-radius:999px;padding:7px 14px;font-size:15px;font-weight:800">✅ Sobraron ' + $V(k.res) + "</span>"
+    : '<span style="display:inline-block;background:' + RCV.rojoClaro + ';color:#8c1d18;border-radius:999px;padding:7px 14px;font-size:15px;font-weight:800">Faltaron ' + $V(-k.res) + "</span>";
+  const fin = k.saldoFin < -0.5 ? '<b style="white-space:nowrap;color:' + RCV.rojo + '">' + $V(k.saldoFin) + "</b> (números rojos)" : '<b style="white-space:nowrap;color:' + MARCA_V.acento + '">' + $V(k.saldoFin) + "</b>";
+  return seccionV_(tituloV_("Cómo se movió la caja", "Empezó " + escV_(k.mesMin) + " en " + $V(k.saldoIni) + " y cerró en " + fin + ".") +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' + fila("Entró", k.ing, RCV.verde, partesV_(k.partesIng)) + fila("Salió", k.egr, RCV.coral, partesV_(k.partesEgr)) + "</table>" +
+    '<div style="margin-top:16px">' + res + "</div>", true);
+}
+function cuotaV_(k) {
+  if (!k.rubros.length || !k.cuota) return "";
+  const c = segmentosV_(k), seg = c.seg, n = seg.length;
+  const celdas = seg.map((s, i) => '<td width="' + s[4] + '%" style="background:' + s[2] + ";height:22px;font-size:0;line-height:0;border-radius:" +
+    (n === 1 ? "11px" : i === 0 ? "11px 0 0 11px" : i === n - 1 ? "0 11px 11px 0" : "0") + '">&nbsp;</td>').join("");
+  const leyenda = seg.map(s => "<tr>" +
+    '<td width="22" style="width:22px;padding:7px 0;border-bottom:1px solid ' + RCV.fina + '"><div style="width:12px;height:12px;border-radius:3px;background:' + s[2] + ';font-size:0;line-height:0">&nbsp;</div></td>' +
+    '<td style="padding:7px 0;border-bottom:1px solid ' + RCV.fina + ";font-family:" + RFV + ";font-size:15px;color:" + RCV.tinta + '">' + s[3] + "&nbsp; " + escV_(s[0]) + "</td>" +
+    '<td align="right" style="padding:7px 0;border-bottom:1px solid ' + RCV.fina + ";font-family:" + RFV + ";font-size:15px;font-weight:800;color:" + RCV.tinta + ';white-space:nowrap">' + $V(s[1]) + "</td></tr>").join("");
+  const caja = t => '<div style="font-size:14px;line-height:1.5;color:' + RCV.gris + ";background:" + RCV.papel + ';border-radius:12px;padding:10px 12px;margin-top:12px">' + t + "</div>";
+  const grandes = k.gastos.filter(g => g[1] > 0.5).slice(0, 3).map(g => '<b style="white-space:nowrap">' + $V(g[1]) + "</b> en " + escV_(g[0]));
+  const nota = (c.sobra < -0.5 ? caja("Este mes el gasto por depto (" + $V(k.costoUnidad) + ") pasó la cuota: la diferencia, " + $V(-c.sobra) + " por depto, salió de la caja.") : "") +
+    (grandes.length ? caja("Los gastos más grandes del mes: " + listaV_(grandes) + ".") : "");
+  return seccionV_(tituloV_("¿En qué se fue tu cuota de " + $V(k.cuota) + "?", "Lo que costó mantener el edificio en " + escV_(k.mesMin) + ", dividido entre los " + k.unidades + " deptos." + MARCA_V.notaCuota) +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;table-layout:fixed;border-collapse:separate"><tr>' + celdas + "</tr></table>" +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px">' + leyenda + "</table>" + nota);
+}
+function aguaV_(k) {
+  const a = k.agua;
+  if (!a || !(a.pagado > 0.5)) return "";
+  const pct = Math.round(a.cobrado / a.pagado * 100), lleno = Math.max(0, Math.min(100, pct));
+  const barra = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;table-layout:fixed;border-collapse:separate;background:' + RCV.aguaClaro + ';border-radius:11px"><tr>' +
+    (lleno > 0 ? '<td width="' + Math.max(lleno, 3) + '%" style="background:' + RCV.agua + ';height:22px;border-radius:11px;font-size:0;line-height:0">&nbsp;</td>' : "") +
+    (lleno < 100 ? '<td style="height:22px;font-size:0;line-height:0">&nbsp;</td>' : "") + "</tr></table>";
+  const sub = (a.pipas ? "Llegaron <b>" + a.pipas + " pipas</b> " + (a.pipas >= 30 ? "(más de una al día)" : "") + " y costaron " : "Las pipas costaron ") + $V(a.pagado) +
+    ". La derrama de agua juntó " + $V(a.cobrado) + (a.derrama ? " (" + $V(a.derrama) + " por depto)" : "") + ".";
+  return seccionV_(tituloV_("💧 El agua de " + escV_(k.mesMin), sub.replace(" )", ")")) + barra +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+      '<td style="padding-top:6px;font-family:' + RFV + ";font-size:13px;font-weight:700;color:" + RCV.agua + '">Derrama ' + $V(a.cobrado) + "</td>" +
+      '<td align="right" style="padding-top:6px;font-family:' + RFV + ";font-size:13px;color:" + RCV.gris + '">' + (pct >= 100 ? "¡Alcanzó! (" + pct + "%)" : "Cubrió el " + pct + "%") + "</td></tr></table>");
+}
+function proyectosV_(k) {
+  const p = (k.proyectos || []).filter(x => x && x.nombre).slice(0, 3);
+  if (!p.length) return "";
+  return seccionV_(tituloV_("🔧 En la mira", "Proyectos del condominio y en qué van.") +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px">' + p.map(x => "<tr>" +
+      '<td style="padding:8px 0;border-bottom:1px solid ' + RCV.fina + ";font-family:" + RFV + ";font-size:15px;color:" + RCV.tinta + '">' + escV_(x.nombre) + "</td>" +
+      '<td align="right" style="padding:8px 0;border-bottom:1px solid ' + RCV.fina + '"><span style="display:inline-block;background:' + MARCA_V.suave + ";color:" + MARCA_V.oscuro + ";font-family:" + RFV + ';font-size:12px;font-weight:800;border-radius:999px;padding:4px 10px;white-space:nowrap">' + escV_(x.estado || "en marcha") + "</span></td></tr>").join("") + "</table>");
+}
+function datoCorreoV_(k) {
+  const d = datoMesV_(k);
+  if (!d) return "";
+  return seccionV_('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:' + RCV.crema + ';border:1px solid #f0e2c0;border-radius:16px"><tr><td style="padding:16px 18px;font-family:' + RFV + '">' +
+    '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:800;color:#8a5a12">✨ Dato del mes</div>' +
+    '<div style="font-family:' + RGV + ';font-size:19px;line-height:1.4;color:#3d2a0c;margin-top:6px">' + d.html + "</div></td></tr></table>");
+}
+function botonesV_(k) {
+  if (!k.base) return "";
+  return seccionV_('<div style="text-align:center">' +
+    '<div style="font-family:' + RGV + ";font-size:20px;color:" + RCV.tinta + ';margin-bottom:12px">¿Y tu depto, cómo va?</div>' +
+    '<a href="' + urlV_(k, "micuenta.html") + '" style="display:inline-block;background:' + MARCA_V.acento + ';color:#ffffff;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px;margin:0 4px 8px">Ver mi cuenta</a>' +
+    '<a href="' + urlV_(k, "finanzas.html") + '" style="display:inline-block;border:2px solid ' + MARCA_V.acento + ";color:" + MARCA_V.acento + ';text-decoration:none;font-weight:800;font-size:15px;padding:11px 20px;border-radius:999px;margin:0 4px 8px">Todas las cuentas</a>' +
+    '<div style="font-size:13px;color:' + RCV.suave + ';margin-top:6px">Finanzas pide la clave de residentes; Mi cuenta, tu PIN.</div></div>');
+}
 function htmlReporteV_(k) {
-  const m = k.m, fila = (a, b, c) => '<tr><td style="padding:8px 0;border-bottom:1px solid #e1e0d9">' + a + '</td><td style="padding:8px 0;border-bottom:1px solid #e1e0d9;text-align:right;font-weight:700;color:' + (c || "#0b0b0b") + '">' + b + "</td></tr>";
-  return '<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;color:#0b0b0b">' +
-    '<p style="margin:0;color:#6f766a;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">Condominio La Valetta</p>' +
-    '<h1 style="font-size:24px;margin:4px 0 2px">Cuentas de ' + k.mes + '</h1><p style="margin:0 0 16px;color:#52514e">Cierre del mes · cifras agregadas</p>' +
-    '<div style="background:#f3f3ee;border-radius:14px;padding:16px 18px;margin-bottom:14px"><div style="font-size:13px;color:#52514e">Saldo al cierre</div><div style="font-size:32px;font-weight:800">' + $V(m.saldoFin) + "</div></div>" +
-    '<table style="width:100%;border-collapse:collapse;font-size:15px">' + fila("Entró (cuotas, agua y casa club)", $V(k.ing), "#006300") + fila("Salió (gastos fijos y variables)", $V(k.egr), "#b3261e") +
-    fila("Pagaron su cuota", m.cobranza.pagaron + " de " + m.unidades) + (m.mora && m.mora.acumulada > 0.5 ? fila("Cuotas atrasadas", $V(m.mora.acumulada) + " · " + m.mora.unidades + " deptos", "#b3261e") : "") + "</table>" +
-    (k.gastos.length ? '<h2 style="font-size:16px;margin:18px 0 6px">En qué se fue</h2><table style="width:100%;border-collapse:collapse;font-size:14px">' + k.gastos.slice(0, 8).map(g => fila(g[0], $V(g[1]))).join("") + "</table>" : "") +
-    (sitioV_() ? '<p style="margin:20px 0"><a href="' + sitioV_() + '/finanzas.html" style="display:inline-block;background:#6f766a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Ver detalle y comprobantes</a></p>' : "") +
-    '<p style="font-size:12px;color:#898781;margin-top:18px">Las cifras se publican siempre agregadas, sin identificar a nadie. Para dejar de recibir este correo, date de baja en la página «Recibe el reporte» del sitio.</p></div>';
+  const h = historiaV_(k), pre = escV_(h.titulo + ". " + h.bajada + " Entraron " + $V(k.ing) + " y salieron " + $V(k.egr) + ".");
+  const baja = urlV_(k, "correo.html");
+  const pie = "Las cifras salen de la hoja de captura de la Administración.<br>La morosidad se publica siempre agregada: las ventanas encendidas se acomodan al azar y no son departamentos reales.<br>" +
+    (baja ? '¿Prefieres no recibir estos correos? <a href="' + baja + '" style="color:' + RCV.suave + '">Date de baja aquí</a>.' : "Para dejar de recibir este correo, date de baja en la página «Recibe el reporte» del sitio.");
+  return '<div style="background:' + RCV.papel + ";padding:18px 8px;font-family:" + RFV + '">' +
+    '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:' + RCV.papel + '">' + pre + "&#8199;&#847;".repeat(60) + "</div>" +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:600px;margin:0 auto;border-collapse:separate">' +
+    "<tr><td>" + heroV_(k, h) + "</td></tr>" +
+    '<tr><td style="background:#ffffff;border-left:1px solid ' + RCV.linea + ";border-right:1px solid " + RCV.linea + '">' + cajaV_(k) + cuotaV_(k) + aguaV_(k) + proyectosV_(k) + datoCorreoV_(k) + botonesV_(k) + "</td></tr>" +
+    '<tr><td style="background:#ffffff;border:1px solid ' + RCV.linea + ";border-top:1px solid " + RCV.fina + ';border-radius:0 0 20px 20px;padding:18px 22px 22px;font-family:' + RFV + ";font-size:12px;line-height:1.6;color:" + RCV.suave + ';text-align:center">' + pie + "</td></tr>" +
+    "</table></div>";
 }
 function mesAnteriorV_() { const [y, m] = Utilities.formatDate(new Date(), ZONA_V, "yyyy-MM").split("-").map(Number); return m === 1 ? (y - 1) + "-12" : y + "-" + ("0" + (m - 1)).slice(-2); }
 function bitacoraV_(mes, a, nota) { const h = hojaV_(HOJA_REP_V, ["Fecha", "Mes", "Enviado a", "Nota"]); h.getRange(h.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), mes, a, nota]]); }
@@ -254,7 +485,7 @@ function envioMensual() {
   if (props.getProperty("enviado_" + id)) { bitacoraV_(id, "", "Ya se había enviado"); return; }
   if (!/^s[ií]/i.test(String(cfgV_().reporte_envio || ""))) { bitacoraV_(id, "", "Envío a residentes en pausa (Config → reporte_envio)"); return; }
   const dest = filasV_(HOJA_CORREOS_V, 4).filter(f => correoOkV_(f[2]) && !/^no/i.test(String(f[3]))).map(f => String(f[2]).trim().toLowerCase()).filter((x, i, a) => a.indexOf(x) === i);
-  for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", "Cuentas de " + k.mes + " · La Valetta", textoWaV_(k), { name: REMITENTE_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: htmlReporteV_(k) });
+  for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", asuntoV_(k), textoWaV_(k), { name: REMITENTE_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: htmlReporteV_(k) });
   props.setProperty("enviado_" + id, new Date().toISOString());
   bitacoraV_(id, dest.length + " correos", "Enviado");
 }
@@ -262,7 +493,7 @@ function envioAhora() { PropertiesService.getScriptProperties().deleteProperty("
 function reportePrueba() {
   const k = datosReporte_(mesAnteriorV_()); const yo = Session.getEffectiveUser().getEmail();
   if (!k) { MailApp.sendEmail(yo, "Prueba del reporte · La Valetta", "El mes " + mesAnteriorV_() + " todavía no tiene datos.", { name: REMITENTE_V }); return; }
-  MailApp.sendEmail(yo, "[Prueba] Cuentas de " + k.mes + " · La Valetta", textoWaV_(k), { name: REMITENTE_V, htmlBody: htmlReporteV_(k) });
+  MailApp.sendEmail(yo, "[Prueba] " + asuntoV_(k), textoWaV_(k), { name: REMITENTE_V, htmlBody: htmlReporteV_(k) });
 }
 
 /* ------------------------------- instalación ------------------------------- */
