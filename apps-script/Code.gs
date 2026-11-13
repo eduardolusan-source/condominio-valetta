@@ -33,6 +33,28 @@ const FILAS = 120;                   // hasta dónde se lee cada pestaña
 
 /* ============================ SERVICIO WEB ============================ */
 
+/* Calentador: cada 10 minutos deja Finanzas y «Mi cuenta» listas en el caché para que nadie espere.
+   Para no gastar la cuota diaria de Google, solo rehace las cuentas si la hoja cambió; si no, alarga
+   la copia guardada (menos de 1 s). Se instala solo con instalarVecinos() o con instalarCalentador(). */
+function calentarFinanzas() {
+  const c = CacheService.getScriptCache(), p = PropertiesService.getScriptProperties();
+  let ver = ""; try { ver = String(DriveApp.getFileById(HOJA_ID).getLastUpdated().getTime()); } catch (e) {}
+  const g = c.get("finanzas"), mp = c.get("matriz_pagos");
+  if (g && mp && ver && p.getProperty("calentador_ver") === ver) {
+    c.put("finanzas", g, 1500); c.put("matriz_pagos", mp, 1500);
+    const d = c.get("deptos_v"); if (d) c.put("deptos_v", d, 3600);
+    return;
+  }
+  try { c.put("finanzas", JSON.stringify(armarFinanzas_()), 1500); } catch (e) { Logger.log("calentador: " + e); }
+  try { if (typeof calentarVecinos_ === "function") calentarVecinos_(); } catch (e) { Logger.log("calentador vecinos: " + e); }
+  if (ver) p.setProperty("calentador_ver", ver);
+}
+function instalarCalentador() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "calentarFinanzas").forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("calentarFinanzas").timeBased().everyMinutes(10).create();
+  calentarFinanzas();
+}
+
 function doGet(e) {
   const p = (e && e.parameter) || {};
   try {

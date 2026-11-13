@@ -271,6 +271,7 @@ function instalarVecinos() {
   ScriptApp.getProjectTriggers().filter(t => ["envioMensual", "avisosCasa"].indexOf(t.getHandlerFunction()) >= 0).forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("envioMensual").timeBased().onMonthDay(10).atHour(9).inTimezone(ZONA_V).create();
   ScriptApp.newTrigger("avisosCasa").timeBased().everyMinutes(30).create();
+  if (typeof instalarCalentador === "function") instalarCalentador();
   aviso_("Listo: pestañas Config (sitio), Correos, Reservas casa club y Reportes; envío del día 10 a las 9 h y avisos de casa club cada 30 min.");
 }
 
@@ -354,8 +355,8 @@ function cuentaDeptoV_(depto) {
 
 /* Pagos de todos los deptos por mes (lo único que necesita «Mi cuenta»). Se guarda 2 minutos: así varias
    consultas seguidas no vuelven a leer las 12 pestañas. Un cambio en la hoja se ve a más tardar 2 min después. */
-function matrizPagosV_() {
-  const c = CacheService.getScriptCache(), g = c.get("matriz_pagos"); if (g) return JSON.parse(g);
+function matrizPagosV_(fresca) {
+  const c = CacheService.getScriptCache(), g = fresca ? null : c.get("matriz_pagos"); if (g) return JSON.parse(g);
   const ss = hoja_(), hist = historico_(ss), out = [];
   hojasMes_(ss).forEach(h => {
     if (hist[h.id] && h.hoja.isSheetHidden()) return;
@@ -363,6 +364,11 @@ function matrizPagosV_() {
     m.pagosPorUnidad.forEach(p => { pagos[String(p[0]).trim()] = Number(p[1]) || 0; });
     out.push({ id: m.id, nombre: m.nombre, anio: m.anio, cuota: m.cuota, capturado: m.capturado, pagos: pagos });
   });
-  try { c.put("matriz_pagos", JSON.stringify(out), 120); } catch (_) {}
+  try { c.put("matriz_pagos", JSON.stringify(out), fresca ? 1500 : 120); } catch (_) {}
   return out;
+}
+/* Lo llama el calentador (Code.gs): «Mi cuenta» y la lista de deptos ya no esperan a la hoja. */
+function calentarVecinos_() {
+  matrizPagosV_(true);
+  try { CacheService.getScriptCache().remove("deptos_v"); deptosV_(); } catch (_) {}
 }
