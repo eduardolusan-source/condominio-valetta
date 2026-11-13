@@ -1,0 +1,65 @@
+/* El edificio de noche (Finanzas) · cada ventana encendida es un departamento al corriente */
+.nc { max-width: 1040px; margin: 1.2rem auto 1.6rem; padding: 0 1.25rem; font-variant-numeric: tabular-nums;
+  --luz: #ffd56b; --luz-2: #ffb938; --parte: #c9a35a; --uno: #3b5072; --dos: #2c3c58; --tres: #4a2a3a; --cielo-1: #0d1a30; --cielo-2: #1f3b63; --muro: #182a44; --muro-2: #22385a; }
+.nc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); padding: 1.2rem 1.1rem 1.1rem; }
+.nc-k { margin: 0; font-size: .76rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.nc-h { font-size: 1.4rem; line-height: 1.2; margin: .25rem 0 .8rem; }
+.nc-meses { display: flex; gap: .4rem; overflow-x: auto; padding: .1rem 0 .7rem; scrollbar-width: none; } .nc-meses::-webkit-scrollbar { display: none; }
+.nc-meses button { flex: 0 0 auto; font: inherit; font-weight: 800; font-size: .88rem; padding: .45rem .9rem; border-radius: 999px; border: 2px solid var(--baseline, #c3c2b7); background: var(--surface); color: var(--ink); cursor: pointer; }
+.nc-meses button.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (prefers-color-scheme: dark) { .nc-meses button.sel { color: #0d0d0d; } }
+
+/* Escena nocturna */
+.nc-escena { position: relative; border-radius: 20px; overflow: hidden; padding: 4.6rem 1rem 0; min-height: 300px;
+  background: linear-gradient(180deg, var(--cielo-1) 0%, var(--cielo-2) 100%); }
+.nc-luna { position: absolute; top: 16px; right: 22px; width: 34px; height: 34px; border-radius: 50%; background: #fff3cf; box-shadow: 0 0 24px 6px rgba(255, 236, 180, .35); }
+.nc-luna::after { content: ""; position: absolute; top: -4px; left: -10px; width: 34px; height: 34px; border-radius: 50%; background: var(--cielo-1); }
+.nc-estrellas { position: absolute; inset: 0; pointer-events: none; background-image:
+  radial-gradient(1.5px 1.5px at 12% 14%, #fff 50%, transparent 52%), radial-gradient(1px 1px at 28% 8%, #fff 50%, transparent 52%),
+  radial-gradient(1.5px 1.5px at 44% 20%, #fff 50%, transparent 52%), radial-gradient(1px 1px at 63% 11%, #fff 50%, transparent 52%),
+  radial-gradient(1px 1px at 7% 36%, #fff 50%, transparent 52%), radial-gradient(1.5px 1.5px at 90% 34%, #fff 50%, transparent 52%),
+  radial-gradient(1px 1px at 76% 24%, #fff 50%, transparent 52%), radial-gradient(1px 1px at 19% 52%, #fff 50%, transparent 52%); opacity: .8; }
+.nc-edif { position: relative; width: min(78%, calc(var(--col, 5) * 58px)); margin: 0 auto; background: var(--muro); border-radius: 6px 6px 0 0; padding: 0 .55rem .2rem;
+  box-shadow: inset 8px 0 0 var(--muro-2), inset -8px 0 0 var(--muro-2); }
+.nc-azotea { margin: 0 -.55rem .55rem; padding: .45rem 0 .4rem; background: var(--muro-2); border-radius: 6px 6px 0 0; text-align: center; position: relative; }
+.nc-azotea::before { content: ""; position: absolute; left: 18%; top: -12px; width: 8px; height: 12px; background: var(--muro-2); border-radius: 2px 2px 0 0; }
+.nc-azotea span { color: #ffe9b0; font-weight: 900; font-size: .64rem; letter-spacing: .35em; text-shadow: 0 0 8px rgba(255, 210, 120, .7); padding-left: .35em; }
+.nc-piso { display: grid; gap: .38rem; margin-bottom: .38rem; }
+.nc-v { display: block; aspect-ratio: 1 / 1.15; border-radius: 3px; background: var(--uno); }
+.nc-v.al { background: linear-gradient(180deg, var(--luz) 0%, var(--luz-2) 100%); box-shadow: 0 0 10px 1px rgba(255, 200, 90, .55); }
+.nc-v.parte { background: linear-gradient(180deg, var(--uno) 0 50%, var(--parte) 50% 100%); }
+.nc-v.uno { background: var(--uno); } .nc-v.dos { background: var(--dos); } .nc-v.tres { background: var(--tres); box-shadow: inset 0 0 0 2px #8c4a5c; }
+.nc-v.nd { background: transparent; }
+.nc-entrada { display: flex; justify-content: center; padding-top: .2rem; }
+.nc-entrada i { width: 26%; height: 26px; background: #ffcf73; border-radius: 4px 4px 0 0; box-shadow: 0 0 14px rgba(255, 200, 100, .6); }
+.nc-calle { height: 12px; margin: 0 -1rem; background: #0b1424; }
+.nc-cifra { position: absolute; left: 14px; top: 12px; color: #fff; display: flex; align-items: baseline; gap: .35rem; }
+.nc-cifra b { font-size: 2rem; line-height: 1; } .nc-cifra span { font-size: .72rem; line-height: 1.1; opacity: .85; }
+.nc-cifra em { font-style: normal; font-weight: 900; font-size: .8rem; background: rgba(255, 213, 107, .2); color: #ffe39a; padding: .1rem .4rem; border-radius: 999px; margin-left: .2rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .nc-anima .nc-v.al, .nc-anima .nc-v.parte { animation: ncLuz .5s ease both; animation-delay: calc(var(--i) * 30ms + 150ms); }
+  @keyframes ncLuz { 0% { background: var(--uno); box-shadow: none; } 60% { filter: brightness(1.35); } 100% { } }
+}
+
+/* Datos */
+.nc-frase { font-size: 1.06rem; line-height: 1.5; margin: 0 0 .7rem; }
+.nc-ley { list-style: none; margin: 0 0 .9rem; padding: 0; display: grid; gap: .3rem; }
+.nc-ley li { display: grid; grid-template-columns: 1.1rem 1fr auto; align-items: center; gap: .55rem; font-size: .92rem; padding: .3rem .55rem; border-radius: 10px; background: var(--page); }
+.nc-ley .nc-v { width: 1.1rem; aspect-ratio: 1 / 1.15; }
+.nc-hoy { background: var(--page); border-radius: 16px; padding: .75rem .9rem; margin-bottom: .9rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; }
+.nc-hoy small { width: 100%; font-weight: 800; font-size: .78rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+.nc-hoy b { font-size: 1.4rem; color: var(--bad-text, #b3261e); } .nc-hoy.cero b { color: var(--good-text, #006300); } .nc-hoy span { color: var(--ink-2); font-size: .92rem; }
+.nc-hoy .nc-agua { width: 100%; margin-top: .2rem; }
+.nc-tend small { display: block; font-weight: 800; font-size: .78rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .35rem; }
+.nc-barras { display: flex; gap: 4px; align-items: flex-end; height: 92px; }
+.nc-barras button { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; }
+.nc-barras span { display: block; width: 100%; height: var(--h); max-height: calc(100% - 30px); border-radius: 4px 4px 2px 2px; background: color-mix(in srgb, var(--luz-2) 55%, var(--surface)); }
+.nc-barras button.sel span { background: var(--luz-2); box-shadow: 0 0 8px rgba(255, 185, 56, .6); }
+.nc-barras button.curso span { background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255,255,255,.45) 4px 7px); }
+.nc-barras em { font-style: normal; font-size: .6rem; font-weight: 800; color: var(--ink-2); }
+.nc-barras button.sel em { color: var(--ink); }
+.nc-barras small { font-size: .62rem; color: var(--muted); text-transform: capitalize; margin: 0 !important; letter-spacing: 0 !important; font-weight: 700 !important; }
+.nc-nota { font-size: .84rem; color: var(--muted); margin: .8rem 0 0; }
+.nc-estado { font-size: .78rem; color: var(--muted); text-align: right; margin: .3rem 0 0; min-height: 1rem; }
+@media (min-width: 760px) { .nc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; align-items: start; } }
+@media (max-width: 759px) { .nc-datos { margin-top: 1rem; } }
