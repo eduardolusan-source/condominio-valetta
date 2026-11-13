@@ -440,6 +440,7 @@
         chipsAnio("inicio") +
         (T.aviso ? '<div class="tb-aviso">' + T.aviso + "</div>" : "") +
         '<div class="tb-grid">' + c1 + c2 + c3 + c4 + c6 + c5 + "</div>" +
+        '<div class="tb-hueco" data-hueco="antes-detalle"></div>' +      /* aquí la página puede meter algo propio (el edificio) */
         '<h2 class="tb-h2">Consulta a detalle</h2>' +
         '<nav class="tb-tiles">' + tiles.map(t => '<a class="tb-tile" href="' + t[0] + '"><span class="tb-tile-i" aria-hidden="true">' + t[1] + '</span><span class="tb-tile-t">' + esc(t[2]) + '</span><span class="tb-tile-s">' + esc(t[3]) + "</span></a>").join("") + "</nav>" +
         '<p class="tb-privacidad">🛡️ ' + (T.privacidad || "La morosidad se publica siempre agregada: montos y número de unidades, sin identificar a nadie.") + "</p>";
@@ -662,6 +663,7 @@
       hashActual = h; vistaActual = nombre;
       raiz.setAttribute("data-vista", nombre);
       raiz.innerHTML = '<div class="tb-vista">' + html + "</div>";
+      try { raiz.dispatchEvent(new CustomEvent("tablero:pintado", { bubbles: true, detail: { vista: nombre } })); } catch (_) { /* navegador viejo */ }
       dibujar();
       if (cambio) animarCifras(raiz);       // al llegar datos en vivo no se repite la animación
       else raiz.querySelectorAll(".tb-vista").forEach(v => { v.style.animation = "none"; });
