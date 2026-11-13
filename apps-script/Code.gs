@@ -40,9 +40,10 @@ function calentarFinanzas() {
   const c = CacheService.getScriptCache(), p = PropertiesService.getScriptProperties();
   let ver = ""; try { ver = String(DriveApp.getFileById(HOJA_ID).getLastUpdated().getTime()); } catch (e) {}
   const g = c.get("finanzas"), mp = c.get("matriz_pagos");
-  if (g && mp && ver && p.getProperty("calentador_ver") === ver) {
+  if (g && mp && c.get("anonimo") && ver && p.getProperty("calentador_ver") === ver) {
     c.put("finanzas", g, 1500); c.put("matriz_pagos", mp, 1500);
     const d = c.get("deptos_v"); if (d) c.put("deptos_v", d, 3600);
+    const an = c.get("anonimo"); if (an) c.put("anonimo", an, 1500);
     return;
   }
   try { c.put("finanzas", JSON.stringify(armarFinanzas_()), 1500); } catch (e) { Logger.log("calentador: " + e); }
@@ -73,7 +74,14 @@ function doGet(e) {
   }
 }
 
-function hoja_() { return HOJA_ID ? SpreadsheetApp.openById(HOJA_ID) : SpreadsheetApp.getActive(); }
+/* En lote (el edificio de Finanzas: 32 deptos seguidos) la hoja y sus pestañas fijas se leen una sola vez. */
+const LOTE_V = { on: false };
+function hoja_() {
+  if (LOTE_V.on && LOTE_V.ss) return LOTE_V.ss;
+  const ss = HOJA_ID ? SpreadsheetApp.openById(HOJA_ID) : SpreadsheetApp.getActive();
+  if (LOTE_V.on) LOTE_V.ss = ss;
+  return ss;
+}
 function aviso_(msg) { Logger.log(msg); try { hoja_().toast(msg, "La Valetta", 10); } catch (_) { /* sin hoja activa no hay aviso en pantalla */ } }
 function texto_(s) { return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON); }
 
@@ -300,6 +308,12 @@ function ligasDrive_(h, fFijos, fVar) {
 const HISTORICO = "Histórico";
 
 function historico_(ss) {
+  if (LOTE_V.on && LOTE_V.hist) return LOTE_V.hist;
+  const r = historicoLeer_(ss);
+  if (LOTE_V.on) LOTE_V.hist = r;
+  return r;
+}
+function historicoLeer_(ss) {
   const h = ss.getSheetByName(HISTORICO);
   const out = {};
   if (!h || h.getLastRow() < 2) return out;
@@ -511,6 +525,12 @@ function redondear_(v, dec) { const f = Math.pow(10, dec == null ? 2 : dec); ret
    la primera pestaña de meses. La mora de Finanzas y «Mi cuenta» parten de ahí. Es PRIVADA: no se publica. */
 const HOJA_SALDOS_INI = "Saldos iniciales";
 function saldosIniciales_(ss) {
+  if (LOTE_V.on && LOTE_V.ini) return LOTE_V.ini;
+  const r = saldosInicialesLeer_(ss);
+  if (LOTE_V.on) LOTE_V.ini = r;
+  return r;
+}
+function saldosInicialesLeer_(ss) {
   const h = ss.getSheetByName(HOJA_SALDOS_INI), out = {};
   if (!h || h.getLastRow() < 2) return out;
   h.getRange(2, 1, h.getLastRow() - 1, 2).getValues().forEach(f => { const d = String(f[0] || "").trim(), v = num_(f[1]); if (d && v) out[d] = v; });

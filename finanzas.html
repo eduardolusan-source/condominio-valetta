@@ -8,6 +8,7 @@
 <title>Finanzas · Condominio La Valetta</title>
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/tablero.css?v=20261112">
+<link rel="stylesheet" href="css/noche.css?v=20261113">
 <link rel="icon" href="assets/mark.png">
 </head>
 <body class="tb-pagina">
@@ -40,6 +41,7 @@
 
 <!-- Contenido protegido: lo dibuja js/tablero.js -->
 <main id="content" hidden>
+  <section class="nc" id="noche" hidden aria-label="Cuántos departamentos están al corriente"></section>
   <div id="tablero"></div>
 </main>
 
@@ -53,6 +55,16 @@
 <script src="js/data.js?v=20261112"></script>
 <script src="js/tablero.js?v=20261112"></script>
 <script src="js/finanzas.js?v=20261112"></script>
+<script src="js/noche.js?v=20261113"></script>
+<script>
+/* El edificio de noche: solo en la portada de Finanzas. */
+(function () {
+  const caja = document.getElementById("noche");
+  const ver = () => { const h = location.hash.replace(/^#/, ""); caja.style.display = h === "" || h === "inicio" ? "" : "none"; };
+  ver(); window.addEventListener("hashchange", ver);
+  Noche.montar(caja, { nombre: "LA VALETTA", columnas: 4, api: "https://script.google.com/macros/s/AKfycbzU158AMEbF-QhMMVPQ4sjREkfEzBT4FYzLsA_Gj3uls50R1d9STamu9FvjVUSb957tvw/exec", llave: "valetta.noche" });
+})();
+</script>
 <script src="js/comun.js"></script>
 </body>
 </html>
