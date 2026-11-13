@@ -145,3 +145,24 @@ sección «reporte mensual» de `Vecinos.gs`; el envío, los candados y `reporte
 - Asunto con gancho: «Las cuentas de octubre · la caja bajó $7,827 · La Valetta». El texto para WhatsApp del kit
   también cambió.
 - Un concepto que en la hoja quedó como fecha sale como «Gasto sin concepto» (en octubre de 2026 hay uno de $2,000).
+
+## Revisión de la hoja, el día 5 (13 de noviembre de 2026)
+Archivo nuevo **`Revision`** en el proyecto **La Valetta · Finanzas**: ya pegado e instalado (`instalarRevision`).
+Solo lee la hoja: no cambia nada.
+- El día 5 de cada mes, a las 8 h, le llega **solo a la Administración** un correo «🔎 Revisión de la hoja · La
+  Valetta · …» con lo que conviene arreglar antes del reporte del día 10. Va a los mismos correos que el kit del día
+  10 (`admonV_`: el correo de la Administración y Config (sitio) → `reporte_copia`); a ti no te llega.
+- Una tarjeta por hallazgo: qué pasa, en qué pestaña y celda, cómo corregirlo y un botón que abre la hoja justo en
+  esa celda.
+- **Por corregir** es lo que cambia lo que ven los vecinos. Por ejemplo, el gasto de $2,000 de octubre cuyo concepto
+  quedó como fecha en la celda B88: en el reporte sale como «Gasto sin concepto». **Por revisar** puede estar bien,
+  pero vale la pena verlo.
+- Revisa cada pestaña de mes, en egresos fijos y variables: conceptos que quedaron como fecha o número, montos
+  escritos como texto (el TOTAL no los suma), montos sin concepto, montos negativos, gastos repetidos y gastos de los
+  últimos tres meses sin liga al comprobante (todos juntos en una sola tarjeta). Además, `sitio_url` y
+  `reporte_envio` en **Config (sitio)**, si la hoja se puede editar con el enlace y todo lo que ya marca el semáforo.
+- Al final trae una o dos mejoras al diseño de la hoja que salen de lo que pasó ese mes, y la lista de lo que ya cuadra.
+- Para ver cómo queda sin mandarle nada a la Administración: Ejecutar → **revisionPrueba** (te llega solo a ti).
+  Ejecutar → **revisarHoja** se la manda ya a la Administración.
+- Si un día se pega en otro proyecto: **+ → Secuencia de comandos** → `Revision` → pega `Revision.gs` → guarda →
+  Ejecutar → **instalarRevision** (una sola vez).
