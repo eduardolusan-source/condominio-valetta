@@ -37,7 +37,6 @@
       else frase = "En <b>" + nomMes(M.id) + "</b>, <b>" + M.al + " de " + U + "</b> departamentos estaban al corriente. " +
         (atras + M.parte ? [M.parte ? pl(M.parte, "debía parte de una cuota", "debían parte de una cuota") : "", M.uno ? pl(M.uno, "debía un mes", "debían un mes") : "", M.dos ? pl(M.dos, "debía dos", "debían dos") : "", M.tres ? pl(M.tres, "debía tres o más", "debían tres o más") : ""].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " y $1") + "." : "¡Todo el edificio al día! 🎉");
       /* Tendencia */
-      const tend = J.meses.map(x => { const p = x.total ? Math.round(x.al / x.total * 100) : 0; return '<button type="button" data-mes="' + x.id + '" class="' + (x.id === M.id ? "sel" : "") + (x.enCurso ? " curso" : "") + '" title="' + esc(x.nombre) + ": " + p + '% al corriente"><em>' + p + '%</em><span style="--h:' + Math.max(4, p) + '%"></span><small>' + esc(x.nombre.slice(0, 3)) + "</small></button>"; }).join("");
       const H = J.hoyDeben || {};
       const ley = CATS.filter(c => M[c[0]]).map(c => '<li><i class="nc-v ' + c[0] + '"></i><span>' + (curso && c[0] === "uno" ? "Aún no paga este mes" : c[1]) + "</span><b>" + M[c[0]] + "</b></li>").join("");
       raiz.innerHTML = '<div class="nc-card">' +
@@ -53,7 +52,6 @@
             '<ul class="nc-ley">' + ley + "</ul>" +
             '<div class="nc-hoy' + (H.deptos ? "" : " cero") + '"><small>Adeudo vencido hoy</small>' + (H.deptos ? "<b>" + $m(H.monto) + "</b><span>entre " + pl(H.deptos, "departamento", "departamentos") + "</span>" : "<b>$0</b><span>nadie debe cuotas vencidas</span>") +
               (H.aguaDeptos ? '<span class="nc-agua">💧 Agua: ' + pl(H.aguaDeptos, "depto debe", "deptos deben") + " " + $m(H.agua) + "</span>" : "") + "</div>" +
-            '<div class="nc-tend"><small>Al corriente, mes por mes</small><div class="nc-barras">' + tend + "</div></div>" +
             '<p class="nc-nota">🛡️ Anónimo: las ventanas se encienden en orden y no corresponden a ningún departamento. Para ver tu propia cuenta usa <a href="micuenta.html">Mi cuenta</a>.</p>' +
             '<p class="nc-estado" data-estado>' + esc(opc.estado || "") + "</p>" +
           "</div></div></div>";
@@ -64,7 +62,8 @@
 
     function usar(j, estado) {
       if (!j || !j.ok || !j.meses || !j.meses.length) return false;
-      J = j; opc.estado = estado;
+      /* Solo el mes actual y el anterior. */
+      J = Object.assign({}, j, { meses: j.meses.filter(x => !j.hoy || x.id <= j.hoy).slice(-2) }); j = J; opc.estado = estado;
       if (!mes || !j.meses.some(x => x.id === mes)) { const cerrados = j.meses.filter(x => !x.enCurso); mes = (cerrados.length ? cerrados : j.meses)[(cerrados.length ? cerrados : j.meses).length - 1].id; }
       raiz.hidden = false; pintar(); return true;
     }
