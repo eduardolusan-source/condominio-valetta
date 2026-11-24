@@ -7,7 +7,7 @@
    - correo.html: un residente registra (o da de baja) su correo con su departamento y la clave del sitio
      (la misma de Finanzas: sin ella no se registra nadie de fuera).
    - Día 10: arma el reporte del mes anterior con cifras AGREGADAS. Con Config → reporte_envio = «sí» lo
-     manda a los correos registrados (en copia oculta); siempre manda a la Administración el kit: el texto
+     manda a los correos registrados (uno por uno); siempre manda a la Administración el kit: el texto
      para WhatsApp y el semáforo de la hoja. No envía si el mes no tiene datos ni dos veces el mismo mes.
    - Semáforo (revisar): meses sin capturar, pestañas copiadas con montos, saldos que no encadenan, gastos
      sin comprobante, reservas sin confirmar. Es PRIVADO: solo llega a la Administración.
@@ -112,7 +112,7 @@ function registrarCorreoV_(d) {
   if (deptosV_().length && deptosV_().map(x => x.toLowerCase()).indexOf(depto.toLowerCase()) < 0) return { ok: false, error: "departamento" };
   if (i >= 0) h.getRange(i + 2, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
   else h.getRange(h.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
-  MailApp.sendEmail(correo, "Ya recibirás el reporte de La Valetta", "Hola:\n\nCada mes, alrededor del día 10, te llegará el reporte de cuentas del condominio: saldo, ingresos, gastos y cobranza, siempre en cifras agregadas.\n\nSi no fuiste tú, date de baja en la página «Recibe el reporte» del sitio" + (sitioV_() ? ": " + sitioV_() + "/correo.html" : "") + ".", { name: REMITENTE_V });
+  MailApp.sendEmail(correo, "Ya recibirás el reporte de La Valetta", "Hola:\n\nCada mes, alrededor del día 10, te llegará el reporte de cuentas del condominio: saldo, ingresos, gastos y cobranza, siempre en cifras agregadas.\n\nPara que no se vaya a correo no deseado, agrega esta dirección a tus contactos; si un día 10 no lo ves, búscalo en la carpeta de correo no deseado y márcalo como «no es correo no deseado».\n\nSi no fuiste tú, date de baja en la página «Recibe el reporte» del sitio" + (sitioV_() ? ": " + sitioV_() + "/correo.html" : "") + ".", { name: REMITENTE_V });
   return { ok: true };
 }
 
@@ -289,11 +289,12 @@ function historiaV_(k) {
   return {
     titulo: titulo, bajada: bajada,
     bajadaHtml: escV_(bajada).replace(escV_(fin), '<b style="white-space:nowrap;color:' + (rojo ? "#ffb4a8" : RCV.luz) + '">' + escV_(fin) + "</b>"),
-    corto: verde ? "¡mes verde!" : k.res >= 0 ? (rojo ? "la caja se recupera" : "la caja creció " + $V(k.res)) : "la caja bajó " + $V(-k.res),
+    corto: verde ? "mes verde, pagaron todos" : k.res >= 0 ? (rojo ? "la caja se recupera" : "la caja creció") : "la caja bajó",
     ventanas: verde ? "Las " + U + " ventanas encendidas: todos pagaron su cuota de " + k.mesMin + "."
       : k.pagaron + " de " + U + " ventanas encendidas: cada luz es un depto que ya pagó su cuota de " + k.mesMin + "."
   };
 }
+/* Asunto llano: sin emoji, sin signo de pesos ni exclamaciones (Hotmail y Outlook los castigan como publicidad). */
 function asuntoV_(k) { return "Las cuentas de " + k.mesMin + " · " + historiaV_(k).corto + " · " + MARCA_V.nombre; }
 function moraTxtV_(k) { return !k.mora ? "" : k.mora.acumulada > 0.5 ? "Cuotas atrasadas: " + $V(k.mora.acumulada) + " de " + k.mora.unidades + (k.mora.unidades === 1 ? " depto" : " deptos") : "Nadie tiene cuotas atrasadas"; }
 /* Una ventana por depto; las encendidas son los que pagaron, barajadas con el mes como semilla. */
@@ -330,6 +331,8 @@ function datoMesV_(k) {
   return t ? { texto: t, html: escV_(t) } : null;
 }
 
+/* La parte de texto del correo: lo mismo que el mensaje de WhatsApp, sin sus asteriscos ni guiones bajos. */
+function textoCorreoV_(k) { return textoWaV_(k).replace(/\*/g, "").replace(/(^|\n)_|_(?=\n|$)/g, "$1") + "\n\nPara dejar de recibirlo: " + (urlV_(k, "correo.html") || "página «Recibe el reporte» del sitio") + "."; }
 function textoWaV_(k) {
   const h = historiaV_(k), dato = datoMesV_(k);
   const l = ["🏢 *" + MARCA_V.nombre + " · cuentas de " + k.mesMin + " " + k.anio + "*", "", (k.pagaron >= k.unidades ? "🎉 " : "") + "*" + h.titulo + "*", ""];
@@ -462,12 +465,11 @@ function botonesV_(k) {
     '<div style="font-size:13px;color:' + RCV.suave + ';margin-top:6px">Finanzas pide la clave de residentes; Mi cuenta, tu PIN.</div></div>');
 }
 function htmlReporteV_(k) {
-  const h = historiaV_(k), pre = escV_(h.titulo + ". " + h.bajada + " Entraron " + $V(k.ing) + " y salieron " + $V(k.egr) + ".");
+  const h = historiaV_(k);   // sin texto oculto de vista previa: es señal de correo no deseado
   const baja = urlV_(k, "correo.html");
   const pie = "Las cifras salen de la hoja de captura de la Administración.<br>La morosidad se publica siempre agregada: las ventanas encendidas se acomodan al azar y no son departamentos reales.<br>" +
     (baja ? '¿Prefieres no recibir estos correos? <a href="' + baja + '" style="color:' + RCV.suave + '">Date de baja aquí</a>.' : "Para dejar de recibir este correo, date de baja en la página «Recibe el reporte» del sitio.");
   return '<div style="background:' + RCV.papel + ";padding:18px 8px;font-family:" + RFV + '">' +
-    '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:' + RCV.papel + '">' + pre + "&#8199;&#847;".repeat(60) + "</div>" +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:600px;margin:0 auto;border-collapse:separate">' +
     "<tr><td>" + heroV_(k, h) + "</td></tr>" +
     '<tr><td style="background:#ffffff;border-left:1px solid ' + RCV.linea + ";border-right:1px solid " + RCV.linea + '">' + cajaV_(k) + cuotaV_(k) + aguaV_(k) + proyectosV_(k) + datoCorreoV_(k) + botonesV_(k) + "</td></tr>" +
@@ -485,15 +487,21 @@ function envioMensual() {
   if (props.getProperty("enviado_" + id)) { bitacoraV_(id, "", "Ya se había enviado"); return; }
   if (!/^s[ií]/i.test(String(cfgV_().reporte_envio || ""))) { bitacoraV_(id, "", "Envío a residentes en pausa (Config → reporte_envio)"); return; }
   const dest = filasV_(HOJA_CORREOS_V, 4).filter(f => correoOkV_(f[2]) && !/^no/i.test(String(f[3]))).map(f => String(f[2]).trim().toLowerCase()).filter((x, i, a) => a.indexOf(x) === i);
-  for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", asuntoV_(k), textoWaV_(k), { name: REMITENTE_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: htmlReporteV_(k) });
+  /* Uno por uno, con el residente como destinatario: un correo que llega en copia oculta junto con otros 39 es
+     justo lo que Hotmail y Outlook mandan a no deseado. Solo si Google ya no deja mandar tantos hoy, sale en copia oculta. */
+  const asunto = asuntoV_(k), plano = textoCorreoV_(k), cuerpo = htmlReporteV_(k), uno = MailApp.getRemainingDailyQuota() >= dest.length + 3;
+  if (uno) {
+    dest.forEach(c => MailApp.sendEmail(c, asunto, plano, { name: REMITENTE_V, htmlBody: cuerpo }));
+    if (dest.indexOf("lavalettaa@gmail.com") < 0) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, htmlBody: cuerpo });   // la Administración ve lo mismo que los residentes
+  } else for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: cuerpo });
   props.setProperty("enviado_" + id, new Date().toISOString());
-  bitacoraV_(id, dest.length + " correos", "Enviado");
+  bitacoraV_(id, dest.length + " correos", uno ? "Enviado uno por uno" : "Enviado en copia oculta (sin cuota para uno por uno)");
 }
 function envioAhora() { PropertiesService.getScriptProperties().deleteProperty("enviado_" + mesAnteriorV_()); envioMensual(); }
 function reportePrueba() {
   const k = datosReporte_(mesAnteriorV_()); const yo = Session.getEffectiveUser().getEmail();
   if (!k) { MailApp.sendEmail(yo, "Prueba del reporte · La Valetta", "El mes " + mesAnteriorV_() + " todavía no tiene datos.", { name: REMITENTE_V }); return; }
-  MailApp.sendEmail(yo, "[Prueba] " + asuntoV_(k), textoWaV_(k), { name: REMITENTE_V, htmlBody: htmlReporteV_(k) });
+  MailApp.sendEmail(yo, "[Prueba] " + asuntoV_(k), textoCorreoV_(k), { name: REMITENTE_V, htmlBody: htmlReporteV_(k) });
 }
 
 /* ------------------------------- instalación ------------------------------- */
