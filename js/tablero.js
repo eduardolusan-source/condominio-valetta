@@ -17,7 +17,7 @@
      meses: [{ id: "2026-08", anio, nombre, corto, saldoIni, saldoFin, vivo,
                ingresos: [{ nombre, monto }],
                grupos:   [{ clave, nombre, monto, cuota: true|false,
-                            items: [{ concepto, detalle, monto, liga }] }],
+                            items: [{ concepto, detalle, monto, liga, partes: [{ nombre, monto }] }] }],   // partes: opcional, de qué se compone el gasto
                cobranza: { pagaron, pct }, mora: { acumulada, unidades, adelantos, unidadesAdelanto } | null,
                agua: { cobrado, pagado } | null, deudaAgua: { monto, unidades } | null,
                indicadores: [[etiqueta, valor texto]], carpeta }],
@@ -286,6 +286,16 @@
       return (a.id === b.id ? min(a) : min(a) + " a " + min(b)) + " de " + anio;
     }
 
+    /* De qué se compone un gasto, según lo anotó la Administración. Si las partidas no
+       suman lo pagado, se dice tal cual: la hoja es la que manda y ahí se corrige. */
+    function partesDe(it) {
+      const P = it.partes || [];
+      if (!P.length) return "";
+      const s = sum(P.map(p => p.monto));
+      return '<ul class="tb-partes">' + P.map(p => "<li><span>" + esc(p.nombre) + "</span><b>" + $2(p.monto) + "</b></li>").join("") + "</ul>" +
+        (Math.abs(s - it.monto) > 1 ? '<small class="tb-partes-nota">Las partidas anotadas suman ' + $2(s) + "; el pago fue de " + $2(it.monto) + ".</small>" : "");
+    }
+
     /* ---------- cálculos ---------- */
     function rubroDe(texto) {
       for (let i = 0; i < O.rubros.length; i++) if (O.rubros[i].re.test(texto)) return i;
@@ -303,7 +313,15 @@
           suma += it.monto;
           if (O.excluirDeCuota && O.excluirDeCuota.test(texto)) return;
           const r = rubroDe(texto);
-          if (r < 0) otros += it.monto; else acc[r] += it.monto;
+          /* Un gasto con desglose reparte cada partida en su rubro; la partida que no
+             encaja en ninguno (y cualquier diferencia) se queda en el rubro del gasto. */
+          let resto = it.monto;
+          (it.partes || []).forEach(p => {
+            const rp = rubroDe(p.nombre);
+            if (rp < 0 || rp === r) return;
+            acc[rp] += p.monto; resto -= p.monto;
+          });
+          if (r < 0) otros += resto; else acc[r] += resto;
         });
         if (g.monto - suma > 1) otros += g.monto - suma;      // gasto sin desglose
       }));
@@ -507,7 +525,7 @@
         m.grupos.map((g, gi) => {
           const its = g.items.slice().sort((a, b) => b.monto - a.monto);
           return '<details class="tb-grupo"' + (gi === 0 ? " open" : "") + '><summary><span class="tb-sw" style="background:' + colEgr[gi % colEgr.length] + '"></span><span class="tb-grupo-n">' + esc(g.nombre) + '</span><span class="tb-grupo-c">' + plural(its.length, "gasto", "gastos") + "</span><b>" + $0(g.monto) + "</b></summary>" +
-            (its.length ? '<ul class="tb-items">' + its.map(it => '<li><div class="tb-item-t"><span>' + esc(it.concepto) + "</span>" + (it.detalle ? "<small>" + esc(it.detalle) + "</small>" : "") + "</div>" +
+            (its.length ? '<ul class="tb-items">' + its.map(it => '<li><div class="tb-item-t"><span>' + esc(it.concepto) + "</span>" + (it.detalle ? "<small>" + esc(it.detalle) + "</small>" : "") + partesDe(it) + "</div>" +
               '<div class="tb-item-m">' + $2(it.monto) + (esLiga(it.liga) ? '<a class="tb-comprobante" href="' + esc(it.liga) + '" target="_blank" rel="noopener">comprobante ↗</a>' : "") + "</div></li>").join("") + "</ul>"
               : '<p class="tb-nota">' + (g.monto > 0.5 ? "Sin desglose capturado." : "Sin gastos de este tipo en el mes.") + "</p>") + "</details>";
         }).join("") + "</section>";

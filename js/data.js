@@ -23,7 +23,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -46,7 +46,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 13]
@@ -68,7 +68,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -89,7 +89,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 19.50]
@@ -111,7 +111,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 0, unidadesAdelanto: 0 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -133,7 +133,7 @@ const VALETTA = {
       mora: { acumulada: 0, unidades: 0, adelantos: 6600, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -154,7 +154,7 @@ const VALETTA = {
       mora: { acumulada: 1100, unidades: 1, adelantos: 6600, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -173,7 +173,7 @@ const VALETTA = {
       mora: { acumulada: 3300, unidades: 2, adelantos: 4400, unidadesAdelanto: 2 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -197,7 +197,7 @@ const VALETTA = {
       mora: { acumulada: 5500, unidades: 2, adelantos: 2200, unidadesAdelanto: 1 },
       detalle: {
         fijos: [
-          ["Servicios de asistencia administrativa", 23973.72],
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
           ["Telmex casa club", 549],
           ["Telmex caseta de vigilancia", 449],
           ["Comisiones bancarias", 6.50]
@@ -205,6 +205,25 @@ const VALETTA = {
         variables: [
           ["Instalación de sensor de lluvia", 1294.56],
           ["Mantenimiento del elevador (julio y agosto)", 4640]
+        ]
+      }
+    },
+    {
+      id: "2026-10", nombre: "Octubre", corto: "Oct",
+      saldoIni: 4368.27, saldoFin: -3458.95,
+      ingresos: { manto: 19800, agua: 0, casaClub: 3000 },
+      egresos: { fijos: 23980.22, variables: 6647 },
+      cobranza: { pagaron: 14, pct: 43.8, morosos: 18 },
+      mora: { acumulada: 24200, unidades: 17, adelantos: 5500, unidadesAdelanto: 3 },
+      detalle: {
+        fijos: [
+          ["Servicios de asistencia administrativa", 23973.72, "", [["Administración", 7700], ["Contabilidad", 1800], ["Servicio de limpieza", 8000], ["Jardinería", 3306.72], ["Fotos de lecturas de agua", 150], ["IVA", 3306.72]]],
+          ["Comisiones bancarias", 6.50]
+        ],
+        variables: [
+          ["23 de octubre de 2026", 2000],
+          ["Luz áreas comunes (CFE)", 3845],
+          ["Luz elevador (CFE)", 802]
         ]
       }
     }

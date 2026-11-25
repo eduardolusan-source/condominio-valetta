@@ -9,6 +9,8 @@
      por concepto). Lee directamente las pestañas mensuales (ENERO, FEBRERO…),
      así que un mes aparece en el sitio en cuanto su pestaña tiene datos.
      NUNCA devuelve cobros por departamento: la morosidad sale sumada.
+     Si un gasto trae su desglose escrito por la Administración (como NOTA de
+     la celda o como COMENTARIO sobre el monto), lo publica partida por partida.
    - instalar(): se corre UNA vez a mano. Crea las pestañas que falten hasta
      diciembre (OCTUBRE, NOVIEMBRE, DICIEMBRE) copiando la del último mes,
      en blanco y con el saldo inicial encadenado al saldo final anterior.
@@ -86,6 +88,12 @@ function aviso_(msg) { Logger.log(msg); try { hoja_().toast(msg, "La Valetta", 1
 function texto_(s) { return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON); }
 
 /* Para probar desde el editor: Ejecutar → probar, y ver el registro. */
+function probarComentarios() {
+  CacheService.getScriptCache().remove("comentarios_hoja");
+  const c = comentariosHoja_();
+  Logger.log(c.length + " comentario(s) leídos" + (typeof Drive === "undefined" ? " — falta agregar el servicio Drive API" : ""));
+  c.forEach(x => Logger.log((x.cita || "(sin cita)") + " → " + JSON.stringify(desglose_(x.texto))));
+}
 function probar() {
   const d = armarFinanzas_();
   Logger.log(JSON.stringify(d, null, 2));
@@ -148,10 +156,12 @@ function armarFinanzas_(conSaldos) {
     delete m.pagosPorUnidad;   // no sale del script
     delete m.archivado;
   });
+  desgloseDeComentarios_(meses);
 
   return {
     ok: true,
     servicio: "valetta-finanzas",
+    desgloses: 1,                      // este script ya lee notas y comentarios: la página no usa los de su copia guardada
     generado: new Date().toISOString(),
     unidades: unidades,
     cuota: cuota,
@@ -224,7 +234,7 @@ function leerMes_(info) {
       if (!conTotal && (et.indexOf("egresos") === 0 || et.indexOf("ingreso") === 0 || et.indexOf("cobros") === 0 || et.indexOf("proyectos") === 0)) break;
       if (!et && !String(vals[i][1]).trim()) { if (++vacias >= 8) break; continue; }
       vacias = 0;
-      out.push({ fila: i + 1, concepto: String(vals[i][0]).trim(), monto: num_(vals[i][1]), c: vals[i][1], d: vals[i][2] });
+      out.push({ fila: i + 1, concepto: concepto_(vals[i][0]), monto: num_(vals[i][1]), c: vals[i][1], d: vals[i][2] });
     }
     return out;
   };
@@ -236,9 +246,17 @@ function leerMes_(info) {
   const casaClub = renglones(fCasa, true).reduce((a, r) => a + r.monto, 0);
 
   const ligas = ligasDrive_(h, fFijos, fVar);
+  const notas = notasEgresos_(h, fFijos, fVar);
+  /* Cada gasto sale como [concepto, monto] o [concepto, monto, liga]; si trae desglose,
+     [concepto, monto, liga, partidas], con liga "" cuando no hay comprobante y
+     partidas = [[nombre, monto], …]. */
   const items = (lista) => lista.filter(r => r.concepto && r.monto).map(r => {
     const liga = ligas[r.fila];
-    return liga ? [r.concepto, redondear_(r.monto), liga] : [r.concepto, redondear_(r.monto)];
+    const partidas = desglose_(notas[r.fila]);
+    const it = [r.concepto, redondear_(r.monto)];
+    if (liga || partidas) it.push(liga || "");
+    if (partidas) it.push(partidas);
+    return it;
   });
   const fijos = items(renglones(fFijos, true));
   const variables = items(renglones(fVar, true));
@@ -291,6 +309,141 @@ function ligasDrive_(h, fFijos, fVar) {
     if (url) out[fila] = url;
   }
   return out;
+}
+
+/* ============================ DESGLOSE DE UN GASTO ============================ */
+
+/* Si en "Concepto" quedó una fecha (la hoja la convierte sola), se escribe como fecha y no como texto técnico. */
+function concepto_(v) {
+  if (Object.prototype.toString.call(v) === "[object Date]") return Utilities.formatDate(v, "America/Mexico_City", "d") + " de " + NOMBRES[parseInt(Utilities.formatDate(v, "America/Mexico_City", "M"), 10) - 1].toLowerCase() + " de " + Utilities.formatDate(v, "America/Mexico_City", "yyyy");
+  return String(v).trim();
+}
+
+/* Notas de celda (Insertar → Nota) en los renglones de egresos, columnas B:D.
+   Devuelve { fila: texto }. Es la vía más firme: la nota va pegada a su celda. */
+function notasEgresos_(h, fFijos, fVar) {
+  const out = {};
+  const inicio = Math.min(fFijos < 0 ? FILAS : fFijos, fVar < 0 ? FILAS : fVar);
+  if (inicio >= FILAS) return out;
+  const notas = h.getRange(inicio + 1, 2, FILAS - inicio, 3).getNotes();
+  for (let i = 0; i < notas.length; i++) {
+    const t = notas[i].map(x => String(x || "").trim()).filter(Boolean).join("\n");
+    if (t) out[inicio + 1 + i] = t;
+  }
+  return out;
+}
+
+/* Convierte el texto libre de la Administración en partidas [[nombre, monto], …].
+   Admite un renglón por partida o varias separadas por coma:
+     "ADMON $7,700 PESOS, CONTABILIDAD 1,800 PESOS"  →  Administración 7700 · Contabilidad 1800
+   Los renglones SUBTOTAL y TOTAL no son partidas y se saltan. Si no salen al
+   menos dos partidas, se considera que el texto no es un desglose (null). */
+function desglose_(texto) {
+  if (!texto) return null;
+  const out = [];
+  String(texto).split(/\r?\n|;/).forEach(linea => {
+    linea.split(/,\s+(?=[^\d\s$])/).forEach(trozo => {
+      const m = /^\s*(.*?[A-Za-zÀ-ÿ).])\s*[:=\-–]*\s*\$?\s*(\d[\d.,]*)\s*(?:pesos|mxn|m\.n\.)?\s*\.?\s*$/i.exec(trozo);
+      if (!m) return;
+      const clave = norm_(m[1]);
+      if (!clave || clave.indexOf("subtotal") === 0 || clave.indexOf("total") === 0 || clave.indexOf("suma") === 0) return;
+      const monto = num_(m[2].replace(/[.,]+$/, ""));
+      if (monto > 0) out.push([nombrePartida_(m[1]), redondear_(monto)]);
+    });
+  });
+  return out.length >= 2 ? out : null;
+}
+
+/* El total que el propio texto declara ("TOTAL= $23,973.72"), o 0 si no trae. */
+function totalDeclarado_(texto) {
+  const t = /(?:^|\n)\s*total\b[^\d\n]*(\d[\d.,]*)/i.exec(String(texto || ""));
+  return t ? num_(t[1].replace(/[.,]+$/, "")) : 0;
+}
+
+/* "SERV LIMPIEZA" → "Servicio de limpieza". Solo arregla mayúsculas y las
+   abreviaturas de siempre; lo demás se queda como lo escribió la Administración. */
+function nombrePartida_(s) {
+  let t = String(s).replace(/\s+/g, " ").replace(/[\s:=\-–$]+$/, "").trim();
+  if (t === t.toUpperCase()) t = t.toLowerCase();
+  [
+    [/\badmon\b\.?/gi, "administración"], [/\badministracion\b/gi, "administración"],
+    [/\bserv\b\.?\s*(de\s+)?/gi, "servicio de "], [/\bmantto\b\.?|\bmtto\b\.?/gi, "mantenimiento"],
+    [/\bjardineria\b/gi, "jardinería"], [/\bareas\b/gi, "áreas"], [/\biva\b/gi, "IVA"], [/\bcfe\b/gi, "CFE"]
+  ].forEach(c => { t = t.replace(c[0], c[1]); });
+  t = t.replace(/\s+/g, " ").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/* Comentarios de la hoja (los de la burbuja, no las notas). SpreadsheetApp no los
+   ve: se leen con el servicio avanzado de Drive (editor → Servicios → + →
+   Drive API, versión 3). Usa el mismo permiso de Drive que el script ya tiene.
+   Si el servicio no está agregado o no responde, Finanzas sale igual, solo que
+   sin esos desgloses. Se guardan 5 minutos para no preguntarle a Drive en cada cuenta. */
+function comentariosHoja_() {
+  if (typeof Drive === "undefined" || !Drive.Comments) return [];
+  const cache = CacheService.getScriptCache();
+  const g = cache.get("comentarios_hoja");
+  if (g) { try { return JSON.parse(g); } catch (_) { /* se vuelve a leer */ } }
+  let out = [];
+  try {
+    let token = null;
+    do {
+      const o = { pageSize: 100, includeDeleted: false, fields: "nextPageToken,comments(content,quotedFileContent,createdTime,deleted)" };
+      if (token) o.pageToken = token;
+      const r = Drive.Comments.list(HOJA_ID, o);
+      out = out.concat(r.comments || []);
+      token = r.nextPageToken;
+    } while (token);
+  } catch (err) {
+    Logger.log("No se pudieron leer los comentarios de la hoja: " + err);
+    return [];
+  }
+  out = out.filter(c => c && !c.deleted && c.content).map(c => ({ texto: String(c.content), cita: (c.quotedFileContent && c.quotedFileContent.value) || "", fecha: String(c.createdTime || "") }));
+  try { cache.put("comentarios_hoja", JSON.stringify(out), CACHE_SEGUNDOS); } catch (_) { /* demasiado grande: sin caché */ }
+  return out;
+}
+
+function desgloseDeComentarios_(meses) {
+  ligarDesgloses_(meses, comentariosHoja_());
+}
+
+/* Un comentario no dice en qué celda está, solo qué valor cita ("$23.973,72").
+   Por eso se liga por MONTO: el total que el propio comentario declara y, si no
+   declara ninguno, el valor citado. Reglas:
+   1. Del más nuevo al más viejo, cada comentario toma el gasto de ese monto en
+      el mes más reciente que aún no tenga desglose (y no posterior al comentario).
+   2. Un gasto sin desglose hereda el del mes más cercano que tenga el MISMO
+      concepto y el MISMO monto: la misma factura, las mismas partidas.
+   Solo sale lo que cuadra con el monto de un gasto: cualquier otro comentario
+   de la hoja (sobre un departamento, por ejemplo) nunca sale del script. */
+function ligarDesgloses_(meses, comentarios) {
+  const gastos = m => ((m.detalle && m.detalle.fijos) || []).concat((m.detalle && m.detalle.variables) || []);
+  (comentarios || []).slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).forEach(c => {
+    const partidas = desglose_(c.texto);
+    if (!partidas) return;
+    const monto = totalDeclarado_(c.texto) || num_(c.cita);
+    if (!monto) return;
+    const tope = (c.fecha || "9999-12").slice(0, 7);
+    for (let i = meses.length - 1; i >= 0; i--) {
+      if (meses[i].id > tope) continue;
+      const it = gastos(meses[i]).filter(g => !g[3] && Math.abs(g[1] - monto) < 0.005)[0];
+      if (!it) continue;
+      if (it.length < 3) it.push("");
+      it[3] = partidas;
+      return;
+    }
+  });
+  const con = [];
+  meses.forEach((m, i) => gastos(m).forEach(g => { if (g[3]) con.push({ i: i, clave: norm_(g[0]) + "|" + g[1], partidas: g[3] }); }));
+  if (!con.length) return;
+  meses.forEach((m, i) => gastos(m).forEach(g => {
+    if (g[3]) return;
+    const clave = norm_(g[0]) + "|" + g[1];
+    const cerca = con.filter(x => x.clave === clave).sort((a, b) => Math.abs(a.i - i) - Math.abs(b.i - i))[0];
+    if (!cerca) return;
+    if (g.length < 3) g.push("");
+    g[3] = cerca.partidas.map(p => p.slice());
+  }));
 }
 
 /* ============================ CAMBIO DE AÑO ============================ */

@@ -166,3 +166,31 @@ Solo lee la hoja: no cambia nada.
   Ejecutar → **revisarHoja** se la manda ya a la Administración.
 - Si un día se pega en otro proyecto: **+ → Secuencia de comandos** → `Revision` → pega `Revision.gs` → guarda →
   Ejecutar → **instalarRevision** (una sola vez).
+
+## Desglose de un gasto: notas y comentarios (24 de noviembre de 2026)
+Cuando la Administración anota de qué se compone un pago, el sitio lo muestra
+partida por partida en el detalle del mes y reparte cada partida en su rubro
+de «En qué se gasta». Sirve de dos maneras:
+
+- **Nota de la celda** (clic derecho → Insertar nota) en el concepto o en el
+  monto del gasto. Es la vía más firme: la nota va pegada a su renglón.
+- **Comentario** (la burbuja) sobre el monto. Un comentario no dice en qué
+  celda está, así que se liga por monto: el `TOTAL` que declara el propio
+  texto o, si no trae, el valor que cita. Un gasto sin desglose hereda el del
+  mes más cercano con el mismo concepto y el mismo monto.
+
+Formato: una partida por renglón (o varias separadas por coma), nombre y
+monto: `SERV LIMPIEZA $8,000 PESOS`. Los renglones `SUBTOTAL` y `TOTAL` no
+cuentan como partidas. Si las partidas no suman lo pagado, el sitio lo dice
+tal cual junto al gasto.
+
+Para activarlo en el script publicado:
+1. Pegar el `Code.gs` nuevo.
+2. En el editor, **Servicios → + → Drive API** (versión v3, identificador
+   `Drive`) → Agregar. Sin este paso las notas funcionan, los comentarios no.
+3. Ejecutar **probarComentarios** y ver en el registro cuántos leyó.
+4. Implementar → Administrar implementaciones → lápiz → **Nueva versión**.
+
+Mientras el script publicado sea el anterior, la página toma el desglose de
+la copia de `js/data.js` (enero a octubre de 2026); en cuanto el script nuevo
+responde (manda `desgloses: 1`), manda la hoja.

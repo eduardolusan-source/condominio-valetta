@@ -43,7 +43,11 @@
   /* ---------- Del formato de la hoja al formato del tablero ---------- */
   const NOMBRES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const n = v => (typeof v === "number" && isFinite(v) ? v : Number(v) || 0);
-  const items = lista => (lista || []).map(it => ({ concepto: it[0] || "", detalle: "", monto: n(it[1]), liga: it[2] || "" }));
+  /* it[3], cuando viene, es el desglose que la Administración anotó en la hoja: [[partida, monto], …]. */
+  const items = lista => (lista || []).map(it => ({
+    concepto: it[0] || "", detalle: "", monto: n(it[1]), liga: it[2] || "",
+    partes: Array.isArray(it[3]) ? it[3].filter(p => p && p[0] && n(p[1]) > 0).map(p => ({ nombre: String(p[0]), monto: n(p[1]) })) : []
+  }));
 
   function mes(o, vivo) {
     const num = parseInt(o.id.slice(5), 10);
@@ -94,7 +98,20 @@
     try { localStorage.setItem(LS, JSON.stringify(j)); } catch (_) { /* sin espacio */ }
     return deRespuesta(j);
   }
+  /* Puente: mientras el script publicado sea anterior al 24 nov 2026 (no manda «desgloses»),
+     los gastos toman el desglose de la copia de js/data.js si coinciden mes, concepto y monto.
+     En cuanto el script nuevo responde, manda la hoja y esto ya no se usa. */
+  function prestarPartes(j) {
+    if (j.desgloses) return;
+    const mapa = {};
+    VALETTA.meses.forEach(m => ["fijos", "variables"].forEach(t => ((m.detalle || {})[t] || []).forEach(it => { if (it[3]) mapa[m.id + "|" + String(it[0]).toLowerCase() + "|" + it[1]] = it[3]; })));
+    (j.meses || []).forEach(m => ["fijos", "variables"].forEach(t => ((m.detalle || {})[t] || []).forEach(it => {
+      const p = mapa[m.id + "|" + String(it[0]).toLowerCase() + "|" + it[1]];
+      if (p && !it[3]) { if (it.length < 3) it.push(""); it[3] = p; }
+    })));
+  }
   function deRespuesta(j) {
+    prestarPartes(j);
     const meses = (j.meses || []).filter(m => /^\d{4}-\d{2}$/.test(String(m.id || ""))).map(m => mes(m, true)).sort((a, b) => a.id.localeCompare(b.id));
     if (!meses.length) throw new Error("el script no trae meses capturados");
     return {
@@ -110,13 +127,16 @@
     sexto: "reserva",
     /* El orden fija el color de cada rubro. */
     rubros: [
-      { nombre: "Administración, vigilancia y limpieza", re: /asistencia administrativa|administraci|vigilancia/i },
+      /* El pago mensual a la administradora viene desglosado en la hoja (administración, contabilidad,
+         limpieza, jardinería…): cada partida cae en su rubro y lo que no encaja se queda aquí. */
+      { nombre: "Administración y contabilidad", re: /asistencia administrativa|administraci|contabilidad|vigilancia/i },
       { nombre: "Elevador", re: { test: t => /elevador/i.test(t) && !/\bluz\b|cfe/i.test(t) } },   // su recibo de luz cuenta como luz
       { nombre: "Luz (CFE)", re: /\bluz\b|cfe|foco|l[aá]mpara/i },
       { nombre: "Pintura y reparaciones", re: /pintura|resane|mantenimiento general|trabajos|v[aá]lvula|flotador|cisterna|cerca|sensor|conexiones|refacci/i },
       { nombre: "Jardinería y riego", re: /riego|poda|maleza|jard/i },
       { nombre: "Teléfono e internet", re: /telmex|tel[eé]fono|internet/i },
-      { nombre: "Artículos de limpieza", re: /limpieza|escoba|recogedor|consumible/i }
+      { nombre: "Artículos de limpieza", re: { test: t => /limpieza|escoba|recogedor|consumible/i.test(t) && !/servicio de limpieza/i.test(t) } },
+      { nombre: "Servicio de limpieza", re: /servicio de limpieza/i }
     ],
     textos: {
       titulo: "Las cuentas de La Valetta",
@@ -125,6 +145,7 @@
       privacidad: "Por disposición de la Ley de protección de datos personales, la morosidad se informa siempre agregada: montos y número de unidades, sin identificar ningún departamento.",
       notaMorosidad: "Los adeudos se gestionan de manera directa y confidencial entre la Administración y cada unidad.",
       acerca: "<h3>De dónde salen los datos</h3><p>De la hoja de captura mensual de la Administración (Valetta-Captura-Mensual): una pestaña por mes con los cobros, los gastos fijos y variables y, cuando existe, la liga al comprobante en Drive.</p>" +
+        "<p>Cuando la Administración anota de qué se compone un pago (por ejemplo, el servicio mensual de administración), el detalle del mes lo muestra partida por partida y cada partida cuenta en su rubro.</p>" +
         "<p>Cuando aparece <b>En vivo</b>, la página lee la hoja cada vez que se abre (puede tardar hasta cinco minutos en reflejar un cambio). Cuando dice <b>Copia guardada</b>, muestra la última copia publicada en el sitio.</p>" +
         "<p>Un mes aparece en cuanto su pestaña tiene cobros o gastos; las pestañas en blanco se ignoran.</p>"
     }
