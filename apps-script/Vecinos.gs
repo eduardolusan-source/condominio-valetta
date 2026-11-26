@@ -32,7 +32,6 @@ function rutaVecinosGet_(p) {
   if (p.accion === "casa") return casaPublica_();
   if (p.accion === "folio") return folioCasa_(p.folio);
   if (p.accion === "resolverCasa") return resolverCasaV_(p);
-  if (p.accion === "resolverRegistro") return resolverRegistroV_(p);
   return null;
 }
 function doPost(e) {
@@ -43,7 +42,7 @@ function doPost(e) {
     if (!limiteV_("post", 300)) return texto_(JSON.stringify({ ok: false, error: "espera" }));
     lock.waitLock(15000);
     const r = d.accion === "correo" ? registrarCorreoV_(d) : d.accion === "casa" ? reservarCasaV_(d) : d.accion === "cancelarCasa" ? cancelarCasaV_(d)
-      : d.accion === "registro" ? registroV_(d) : d.accion === "pin" ? crearPinV_(d) : d.accion === "cuenta" ? miCuentaV_(d) : { ok: false, error: "accion" };
+      : d.accion === "olvide" ? olvidePinV_(d) : d.accion === "pin" ? crearPinV_(d) : d.accion === "cuenta" ? miCuentaV_(d) : { ok: false, error: "accion" };
     return texto_(JSON.stringify(r));
   } catch (err) { return texto_(JSON.stringify({ ok: false, error: String(err.message || err) })); }
   finally { try { lock.releaseLock(); } catch (_) {} }
@@ -514,7 +513,7 @@ function instalarVecinos() {
    ["sitio_url", "", "Dirección del sitio (sin / al final), para las ligas de los correos."],
    ["casa_club_garantia", 3000, "Garantía al apartar la casa club."], ["casa_club_costo", 1000, "Lo que se queda: limpieza y fondo de la casa club."]]
     .forEach(r => { if (!tiene(r[0])) h.getRange(h.getLastRow() + 1, 1, 1, 3).setValues([r]); });
-  hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V); hojaV_(HOJA_RCC_V, ENC_RCC_V); hojaV_(HOJA_PIN_V, ENC_PIN_V); hojaV_(HOJA_REG_V, ENC_REG_V); hojaV_(HOJA_REP_V, ["Fecha", "Mes", "Enviado a", "Nota"]);
+  hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V); hojaV_(HOJA_RCC_V, ENC_RCC_V); hojaV_(HOJA_PIN_V, ENC_PIN_V); hojaV_(HOJA_REP_V, ["Fecha", "Mes", "Enviado a", "Nota"]);
   ScriptApp.getProjectTriggers().filter(t => ["envioMensual", "avisosCasa"].indexOf(t.getHandlerFunction()) >= 0).forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("envioMensual").timeBased().onMonthDay(10).atHour(9).inTimezone(ZONA_V).create();
   ScriptApp.newTrigger("avisosCasa").timeBased().everyMinutes(30).create();
@@ -537,121 +536,88 @@ function resolverCasaV_(p) {
 }
 
 /* ------------------------------- Mi cuenta (PIN por departamento) -------------------------------
-   Registro con correo verificado (26 de noviembre de 2026). Ya nadie crea un PIN solo con la clave de residentes:
-   1. El propietario se registra con departamento, nombre y correo → renglón en «Registro (privado)».
-   2. A la Administración le llega un correo con dos botones firmados: «Sí es el propietario» / «No lo conozco».
-   3. Al aprobar, el correo queda ligado al depto en «PIN (privado)» y al propietario le llega una liga personal
-      (firmada, caduca en 48 h y sirve una sola vez) para crear su PIN.
-   4. Olvidé o quiero cambiar mi PIN: la liga se manda sola al correo ya aprobado, sin pasar por la Administración.
-   Para aprobar de antemano, la Administración puede escribir depto y correo en «PIN (privado)» (PIN vacío).
-   Un PIN viejo sin correo deja de servir: ese depto se registra de nuevo. */
-const HOJA_PIN_V = "PIN (privado)", ENC_PIN_V = ["Departamento", "PIN cifrado (no editar)", "Creado", "Correo"];
-const HOJA_REG_V = "Registro (privado)", ENC_REG_V = ["Folio", "Solicitado", "Departamento", "Nombre", "Correo", "Estatus", "Resuelto"];
+   PIN preasignado (26 de noviembre de 2026). Ya nadie crea un PIN con la clave de residentes:
+   1. Ejecutar → asignarPines: da un PIN al azar a cada depto que no tenga y lo anota en «PIN (privado)»,
+      columna «PIN para entregar». La Administración se lo comparte a cada propietario.
+   2. La primera vez, el propietario entra con su depto y ese PIN y la página solo le pide registrar su correo
+      (queda en la columna Correo y en «Correos», para el reporte del día 10).
+   3. Olvidé o quiero cambiar mi PIN: llega una liga personal al correo registrado (firmada, caduca en 48 h y
+      sirve una sola vez). Sin correo registrado, la Administración le dicta el PIN de la hoja.
+   Para reponer un PIN: borra el renglón de ese depto y vuelve a ejecutar asignarPines. */
+const HOJA_PIN_V = "PIN (privado)", ENC_PIN_V = ["Departamento", "PIN cifrado (no editar)", "Creado", "Correo", "PIN para entregar"];
 const HORAS_LIGA_V = 48, SITIO_FIJO_V = "https://eduardolusan-source.github.io/condominio-valetta";
 function hashPinV_(depto, pin) { return hexV_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, secretoV_() + "|" + String(depto).toUpperCase() + "|" + String(pin), Utilities.Charset.UTF_8)); }
 function deptoValidoV_(depto) { const l = deptosV_(); const i = l.map(x => x.toLowerCase()).indexOf(String(depto || "").trim().toLowerCase()); return i >= 0 ? l[i] : (l.length ? "" : String(depto || "").trim()); }
 function escV_(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 function baseV_() { return sitioV_() || SITIO_FIJO_V; }
+function pinFacilV_(pin) { return /^(\d)\1+$/.test(pin) || "0123456789".indexOf(pin) >= 0 || "9876543210".indexOf(pin) >= 0; }
 function filaPinV_(depto) {
   const fs = filasV_(HOJA_PIN_V, 4), i = fs.findIndex(f => String(f[0]).trim().toUpperCase() === depto.toUpperCase());
   return i < 0 ? null : { fila: i + 2, hash: String(fs[i][1] || "").trim(), correo: String(fs[i][3] || "").trim().toLowerCase() };
 }
+/* Ejecutar a mano desde el editor. No toca a los deptos que ya tienen PIN. */
+function asignarPines() {
+  const h = hojaV_(HOJA_PIN_V, ENC_PIN_V); h.getRange(1, 1, 1, ENC_PIN_V.length).setValues([ENC_PIN_V]).setFontWeight("bold");
+  const ya = filasV_(HOJA_PIN_V, 2).filter(f => String(f[1] || "").trim()).map(f => String(f[0]).trim().toUpperCase()), nuevos = [];
+  deptosV_().forEach(depto => {
+    if (ya.indexOf(depto.toUpperCase()) >= 0) return;
+    let pin; do { pin = ("000" + (parseInt(Utilities.getUuid().replace(/-/g, "").slice(0, 8), 16) % 10000)).slice(-4); } while (pinFacilV_(pin));
+    const fila = [depto, hashPinV_(depto, pin), new Date(), "", "'" + pin], fp = filaPinV_(depto);
+    if (fp) { fila[3] = fp.correo; h.getRange(fp.fila, 1, 1, 5).setValues([fila]); } else h.getRange(h.getLastRow() + 1, 1, 1, 5).setValues([fila]);
+    nuevos.push(depto);
+  });
+  aviso_(nuevos.length ? "PIN asignado a " + nuevos.length + " deptos: están en la columna «PIN para entregar» de «" + HOJA_PIN_V + "»." : "Todos los deptos ya tenían PIN.");
+}
 function botonV_(url, txt, color) { return '<a href="' + url + '" style="display:inline-block;margin:6px 8px 6px 0;padding:14px 22px;border-radius:999px;background:' + color + ';color:#fff;text-decoration:none;font-weight:700;font-size:16px">' + txt + "</a>"; }
 function firmaPinV_(depto, correo, x, hash) { return firmaV_(["pin", depto.toUpperCase(), correo, x, hash].join("|")); }
-/* La liga personal: va firmada con el correo aprobado y el PIN actual, así que muere al crear el PIN o al cambiar el correo. */
-function enviarLigaPinV_(depto, fp) {
-  const x = Date.now() + HORAS_LIGA_V * 3600000;
-  const liga = baseV_() + "/micuenta.html?crear=1&d=" + encodeURIComponent(depto) + "&x=" + x + "&t=" + firmaPinV_(depto, fp.correo, x, fp.hash);
-  const que = fp.hash ? "cambiar tu PIN" : "crear tu PIN";
-  MailApp.sendEmail(fp.correo, "La Valetta: liga para " + que + " (depto " + depto + ")",
-    "Abre esta liga para " + que + " del depto " + depto + ":\n" + liga + "\n\nSirve una sola vez y caduca en " + HORAS_LIGA_V + " horas. No la reenvíes.\nSi no la pediste tú, ignora este correo: tu PIN no cambia.",
-    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Mi cuenta · depto ' + escV_(depto) + '</p><h2 style="margin:6px 0 10px">Toca el botón para ' + que + "</h2>" +
-      botonV_(liga, "🔐 " + (fp.hash ? "Cambiar mi PIN" : "Crear mi PIN"), "#2e7d32") + '<p style="color:#898781;font-size:13px;margin-top:16px">Sirve una sola vez y caduca en ' + HORAS_LIGA_V + " horas. No reenvíes este correo.<br>Si no lo pediste tú, ignóralo: tu PIN no cambia.</p></div>" });
-}
-/* Registro nuevo, cambio de correo u «olvidé mi PIN»: si el correo ya es el aprobado, la liga sale sola. */
-function registroV_(d) {
-  const depto = deptoValidoV_(d.depto), correo = limpioV_(d.correo, 120).toLowerCase(), nombre = limpioV_(d.nombre, 80);
+/* Olvidé mi PIN: la liga solo sale al correo registrado; va firmada con ese correo y el PIN actual, así que muere al usarse. */
+function olvidePinV_(d) {
+  const depto = deptoValidoV_(d.depto), correo = limpioV_(d.correo, 120).toLowerCase();
   if (!depto) return { ok: false, error: "departamento" };
   if (!correoOkV_(correo)) return { ok: false, error: "correo" };
-  const U = depto.toUpperCase(), fp = filaPinV_(depto);
-  if (fp && fp.correo === correo) {
-    if (!limiteV_("liga_" + U, 4)) return { ok: false, error: "espera" };
-    enviarLigaPinV_(depto, fp);
-    return { ok: true, estado: "liga" };
-  }
-  if (nombre.length < 3) return { ok: false, error: "nombre" };
-  if (!limiteV_("reg_" + U, 3)) return { ok: false, error: "espera" };
-  const h = hojaV_(HOJA_REG_V, ENC_REG_V), fs = filasV_(HOJA_REG_V, ENC_REG_V.length);
-  let f = fs.find(x => String(x[2]).toUpperCase() === U && String(x[4]).toLowerCase() === correo && /por confirmar/i.test(String(x[5]))), folio = f ? String(f[0]) : "";
-  if (!f) {
-    do { folio = "R-" + Utilities.getUuid().replace(/-/g, "").slice(0, 6).toUpperCase(); } while (fs.some(x => String(x[0]) === folio));
-    h.getRange(h.getLastRow() + 1, 1, 1, ENC_REG_V.length).setValues([[folio, new Date(), depto, nombre, correo, "Por confirmar", ""]]);
-  }
-  const liga = e => baseV_() + "/casa-admin.html?accion=resolverRegistro&folio=" + folio + "&e=" + e + "&t=" + firmaV_("reg|" + folio + "|" + e);
-  const ojo = fp && fp.correo ? "⚠️ Este depto ya tiene registrado otro correo (" + fp.correo + "). Si apruebas, este lo reemplaza y el PIN anterior deja de servir."
-    : fp && fp.hash ? "Este depto creó un PIN antes, sin correo. Al aprobar, creará uno nuevo con su liga." : "";
-  admonV_().forEach(a => MailApp.sendEmail(a, "🔐 Registro: depto " + depto + " · " + nombre + " (" + folio + ")",
-    nombre + " (" + correo + ") quiere registrarse como propietario del depto " + depto + "." + (ojo ? "\n" + ojo : "") + "\n\nSí es el propietario: " + liga("Aprobado") + "\n\nNo lo conozco: " + liga("Rechazado"),
-    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Registro · ' + folio + '</p><h2 style="margin:6px 0 4px">¿' + escV_(nombre) + " es del depto " + escV_(depto) + '?</h2><p style="color:#52514e;margin:0 0 14px">Correo: <b>' + escV_(correo) + "</b></p>" +
-      (ojo ? '<p style="background:#fff3cd;color:#7a5a00;padding:10px 12px;border-radius:10px;margin:0 0 14px">' + escV_(ojo) + "</p>" : "") +
-      botonV_(liga("Aprobado"), "✅ Sí es el propietario", "#2e7d32") + botonV_(liga("Rechazado"), "❌ No lo conozco", "#b3261e") +
-      '<p style="color:#898781;font-size:13px;margin-top:16px">Aprueba solo si reconoces el nombre y el correo. Al aprobar, a ese correo le llega la liga para crear su PIN y ver el estado de cuenta del depto. Si te equivocas, toca el otro botón.</p></div>' }));
-  MailApp.sendEmail(correo, "Recibimos tu registro en La Valetta (depto " + depto + ")", "Hola, " + nombre + ":\n\nLa Administración va a confirmar que este correo es del depto " + depto + ". En cuanto lo haga, te llegará aquí mismo la liga para crear tu PIN.\n\nSi no fuiste tú, ignora este correo.", { name: REMITENTE_V });
-  return { ok: true, estado: "pendiente" };
+  if (!limiteV_("liga_" + depto.toUpperCase(), 4)) return { ok: false, error: "espera" };
+  const fp = filaPinV_(depto);
+  if (!fp || !fp.hash || fp.correo !== correo) return { ok: false, error: "nocoincide" };
+  const x = Date.now() + HORAS_LIGA_V * 3600000;
+  const liga = baseV_() + "/micuenta.html?crear=1&d=" + encodeURIComponent(depto) + "&x=" + x + "&t=" + firmaPinV_(depto, fp.correo, x, fp.hash);
+  MailApp.sendEmail(fp.correo, "La Valetta: liga para cambiar tu PIN (depto " + depto + ")",
+    "Abre esta liga para poner un PIN nuevo al depto " + depto + ":\n" + liga + "\n\nSirve una sola vez y caduca en " + HORAS_LIGA_V + " horas. No la reenvíes.\nSi no la pediste tú, ignora este correo: tu PIN no cambia.",
+    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Mi cuenta · depto ' + escV_(depto) + '</p><h2 style="margin:6px 0 10px">Toca el botón para poner un PIN nuevo</h2>' +
+      botonV_(liga, "🔐 Cambiar mi PIN", "#2e7d32") + '<p style="color:#898781;font-size:13px;margin-top:16px">Sirve una sola vez y caduca en ' + HORAS_LIGA_V + " horas. No reenvíes este correo.<br>Si no lo pediste tú, ignóralo: tu PIN no cambia.</p></div>" });
+  return { ok: true };
 }
-/* La Administración toca un botón del correo (la liga va firmada: no se puede inventar). */
-function resolverRegistroV_(p) {
-  const folio = String(p.folio || "").toUpperCase(), e = p.e === "Aprobado" || p.e === "Rechazado" ? p.e : "";
-  if (!e || String(p.t || "") !== firmaV_("reg|" + folio + "|" + e)) return { ok: false, error: "liga" };
-  const lock = LockService.getScriptLock(); lock.waitLock(15000);
-  try {
-    const h = hoja_().getSheetByName(HOJA_REG_V), fs = filasV_(HOJA_REG_V, ENC_REG_V.length), i = fs.findIndex(f => String(f[0]).toUpperCase() === folio);
-    if (!h || i < 0) return { ok: false, error: "no encontrado" };
-    const depto = String(fs[i][2]), nombre = String(fs[i][3]), correo = String(fs[i][4]).trim().toLowerCase(), antes = String(fs[i][5] || "Por confirmar");
-    const out = { ok: true, registro: true, folio: folio, estatus: e, depto: depto, nombre: nombre, correo: correo };
-    if (antes === e) return out;
-    const hp = hojaV_(HOJA_PIN_V, ENC_PIN_V), fp = filaPinV_(depto);
-    if (e === "Aprobado") {
-      const fila = [depto, "", new Date(), correo];
-      if (fp) hp.getRange(fp.fila, 1, 1, 4).setValues([fila]); else hp.getRange(hp.getLastRow() + 1, 1, 1, 4).setValues([fila]);
-      CacheService.getScriptCache().remove("pinmal_" + depto.toUpperCase());
-      if (fp && fp.correo && fp.correo !== correo && correoOkV_(fp.correo)) MailApp.sendEmail(fp.correo, "La Valetta: el depto " + depto + " cambió su correo", "La Administración aprobó otro correo para la cuenta del depto " + depto + ", así que este ya no da acceso.\n\nSi no estás de acuerdo, escribe a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
-      /* También recibe el reporte del día 10 (puede darse de baja en «Recibe el reporte»). */
-      const hc = hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V);
-      if (!filasV_(HOJA_CORREOS_V, 4).some(f => String(f[2]).trim().toLowerCase() === correo)) hc.getRange(hc.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
-      enviarLigaPinV_(depto, { correo: correo, hash: "" });
-    } else {
-      if (/aprobado/i.test(antes) && fp && fp.correo === correo) hp.deleteRow(fp.fila);   // se arrepintió: ese correo ya no entra
-      MailApp.sendEmail(correo, "La Valetta: no pudimos confirmar tu registro", "La Administración no pudo confirmar que este correo sea del depto " + depto + ".\n\nSi es un error, escríbele: lavalettaa@gmail.com o WhatsApp 442 282 78 29.", { name: REMITENTE_V });
-    }
-    h.getRange(i + 2, 6, 1, 2).setValues([[e, new Date()]]);
-    return out;
-  } finally { try { lock.releaseLock(); } catch (_) {} }
-}
-/* Crear o cambiar el PIN: solo con la liga personal que llegó al correo aprobado. */
+/* Cambiar el PIN: solo con la liga personal que llegó al correo registrado. */
 function crearPinV_(d) {
   const depto = deptoValidoV_(d.depto), pin = String(d.pin || ""), x = Number(d.x) || 0;
   if (!depto) return { ok: false, error: "departamento" };
   if (!limiteV_("pinliga_" + depto.toUpperCase(), 20)) return { ok: false, error: "espera" };
   const fp = filaPinV_(depto);
-  if (!fp || !fp.correo || x < Date.now() || String(d.t || "") !== firmaPinV_(depto, fp.correo, x, fp.hash)) return { ok: false, error: "liga" };
+  if (!fp || !fp.correo || !fp.hash || x < Date.now() || String(d.t || "") !== firmaPinV_(depto, fp.correo, x, fp.hash)) return { ok: false, error: "liga" };
   if (!/^\d{4,6}$/.test(pin)) return { ok: false, error: "pin" };
-  if (/^(\d)\1+$/.test(pin) || "0123456789".indexOf(pin) >= 0 || "9876543210".indexOf(pin) >= 0) return { ok: false, error: "facil" };
-  hoja_().getSheetByName(HOJA_PIN_V).getRange(fp.fila, 2, 1, 2).setValues([[hashPinV_(depto, pin), new Date()]]);
+  if (pinFacilV_(pin)) return { ok: false, error: "facil" };
+  hoja_().getSheetByName(HOJA_PIN_V).getRange(fp.fila, 2, 1, 4).setValues([[hashPinV_(depto, pin), new Date(), fp.correo, "(lo cambió el propietario)"]]);
   CacheService.getScriptCache().remove("pinmal_" + depto.toUpperCase());
-  MailApp.sendEmail(fp.correo, "Tu PIN de La Valetta quedó listo", "El PIN del depto " + depto + " se " + (fp.hash ? "cambió" : "creó") + " hace un momento. Ya puedes ver tu estado de cuenta en «Mi cuenta»: " + baseV_() + "/micuenta.html\n\nSi lo olvidas, toca «Olvidé mi PIN» y te llega otra liga a este correo.\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
+  MailApp.sendEmail(fp.correo, "Tu PIN de La Valetta cambió", "El PIN del depto " + depto + " se cambió hace un momento. Ya puedes entrar a «Mi cuenta»: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
   return Object.assign({ ok: true }, cuentaDeptoV_(depto));
 }
+/* Entrar. La primera vez (depto sin correo) pide registrar el correo: «pidecorreo» hasta que llegue uno válido. */
 function miCuentaV_(d) {
   const depto = deptoValidoV_(d.depto), c = CacheService.getScriptCache(), k = "pinmal_" + String(depto).toUpperCase(), malos = Number(c.get(k) || 0);
   if (!depto) return { ok: false, error: "departamento" };
   if (malos >= 6) return { ok: false, error: "espera" };
   const f = filaPinV_(depto);
-  if (!f) return { ok: false, error: "sinpin" };
-  if (!f.correo) return { ok: false, error: "sinregistro" };   // PIN de antes, creado sin correo: se registra de nuevo
-  if (!f.hash) return { ok: false, error: "sinpin" };
-  if (f.hash !== hashPinV_(depto, String(d.pin || ""))) { c.put(k, String(malos + 1), 3600); return { ok: false, error: "pinmal", quedan: 5 - malos }; }
+  if (!f || !f.hash) return { ok: false, error: "sinpin" };
+  if (f.hash !== hashPinV_(depto, String(d.pin || "").trim())) { c.put(k, String(malos + 1), 3600); return { ok: false, error: "pinmal", quedan: 5 - malos }; }
   c.remove(k);
+  if (!f.correo) {
+    const correo = limpioV_(d.correo, 120).toLowerCase();
+    if (!correo) return { ok: false, error: "pidecorreo" };
+    if (!correoOkV_(correo)) return { ok: false, error: "correo" };
+    hoja_().getSheetByName(HOJA_PIN_V).getRange(f.fila, 4).setValue(correo);
+    const hc = hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V);   // también recibe el reporte del día 10 (puede darse de baja)
+    if (!filasV_(HOJA_CORREOS_V, 4).some(x => String(x[2]).trim().toLowerCase() === correo)) hc.getRange(hc.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
+    MailApp.sendEmail(correo, "Tu correo quedó registrado en La Valetta (depto " + depto + ")", "Listo: con este correo recibirás cada mes el reporte de cuentas del condominio y podrás cambiar tu PIN si lo olvidas («Olvidé mi PIN» en Mi cuenta).\n\nTu estado de cuenta: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
+  }
   return Object.assign({ ok: true }, cuentaDeptoV_(depto));
 }
 /* Estado de cuenta de UN depto, con la misma regla que la mora de Finanzas: todo lo pagado menos todas las

@@ -195,18 +195,15 @@ Mientras el script publicado sea el anterior, la página toma el desglose de
 la copia de `js/data.js` (enero a octubre de 2026); en cuanto el script nuevo
 responde (manda `desgloses: 1`), manda la hoja.
 
-### «Mi cuenta»: registro con correo verificado (26 de noviembre de 2026)
+### «Mi cuenta»: PIN preasignado y registro de correo (26 de noviembre de 2026)
 Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión**. No pide permisos nuevos.
-- Ya nadie crea un PIN con la clave de residentes. En `micuenta.html` el propietario se **registra** con
-  departamento, nombre y correo; queda en la pestaña **Registro (privado)** como «Por confirmar».
-- A la Administración le llega un correo con **✅ Sí es el propietario** y **❌ No lo conozco** (ligas firmadas que
-  abren `casa-admin.html`). Al aprobar, el correo queda ligado al depto en **PIN (privado)**, se agrega a
-  **Correos** (reporte del día 10) y al propietario le llega una liga personal para crear su PIN: caduca en 48 h
-  y sirve una sola vez. Si la Administración se equivoca, toca el otro botón.
-- **Olvidé mi PIN**: con el correo ya aprobado, la liga sale sola; la Administración no hace nada.
-- Cambio de correo o de dueño: se registra de nuevo; el aviso a la Administración advierte que ya había otro
-  correo, y al aprobar el anterior pierde el acceso (y se le avisa).
-- Aprobar de antemano: escribe depto y correo en **PIN (privado)** (columna del PIN vacía). Ese depto pide su
-  liga con «Olvidé mi PIN» o «Regístrate» y le llega sin esperar el visto bueno.
-- Los PIN creados antes **sin correo** dejan de servir: ese depto se registra de nuevo. Los que sí tienen correo
-  siguen funcionando.
+- Ya nadie crea un PIN con la clave de residentes. Ejecutar → **asignarPines** da un PIN al azar a cada depto que
+  no tenga y lo anota en **PIN (privado)**, columna **PIN para entregar**. La Administración lo comparte a cada
+  propietario. No toca a los deptos que ya tienen PIN.
+- La primera vez, el propietario entra con su depto y su PIN y la página le pide **registrar su correo**: queda
+  en la columna Correo y en **Correos** (reporte del día 10).
+- **Olvidé mi PIN**: llega una liga personal al correo registrado (caduca en 48 h, sirve una vez) para poner uno
+  nuevo; la columna «PIN para entregar» pasa a «(lo cambió el propietario)». Sin correo registrado, la
+  Administración le dicta el PIN de la hoja.
+- Reponer un PIN o corregir un correo mal escrito: borra el renglón (o la celda del correo) de ese depto en
+  **PIN (privado)**; si borraste el renglón, vuelve a ejecutar **asignarPines**.
