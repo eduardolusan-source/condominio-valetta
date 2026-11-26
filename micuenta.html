@@ -41,19 +41,20 @@
   <h1>🔐 Mi cuenta</h1>
   <form class="caja" id="fE" novalidate>
     <label class="lb" for="dep">Departamento</label><select class="in" id="dep"><option value="">Cargando…</option></select>
-    <label class="lb" for="pin">Tu PIN <small style="font-weight:400;color:var(--muted)">(te lo da la Administración)</small></label><input class="in" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" style="font-size:1.4rem;letter-spacing:.3em">
+    <label class="lb" for="pin">Tu PIN</label><input class="in" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" style="font-size:1.4rem;letter-spacing:.3em">
     <div id="bCor" hidden><p class="msg ok" style="margin:.9rem 0 0">👋 Es tu primera vez. Registra tu correo para terminar: ahí te llegará el reporte mensual de cuentas y podrás cambiar tu PIN si lo olvidas.</p>
     <label class="lb" for="mailE">Tu correo</label><input class="in" id="mailE" type="email" inputmode="email" autocomplete="email">
     <p class="sub" style="margin:.4rem 0 0;font-size:.85rem">Puedes darte de baja del reporte cuando quieras. <a href="privacidad.html">Aviso de privacidad</a>.</p></div>
     <label style="display:flex;gap:.5rem;align-items:center;margin-top:.8rem"><input type="checkbox" id="rec" checked style="width:22px;height:22px"> Recordar en este teléfono</label>
     <button class="go" id="goE">Ver mi cuenta</button><p class="msg" id="mE" hidden></p>
-    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aOlvide">Olvidé mi PIN</button></p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aOlvide">¿Primera vez u olvidaste tu PIN? <b>Recíbelo por correo</b></button></p>
   </form>
   <form class="caja" id="fO" novalidate hidden>
-    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Olvidé mi PIN</h2><p class="sub" style="margin:0">Te mandamos una liga al correo con el que te registraste para que pongas uno nuevo.</p>
+    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Recibe tu PIN por correo</h2><p class="sub" style="margin:0">Escribe tu correo y ahí te llega el PIN de tu departamento. Si quieres, después lo cambias por uno que solo tú sepas.</p>
     <label class="lb" for="depO">Departamento</label><select class="in" id="depO"></select>
-    <label class="lb" for="mailO">Tu correo registrado</label><input class="in" id="mailO" type="email" inputmode="email" autocomplete="email">
-    <button class="go" id="goO">Mandarme la liga</button><p class="msg" id="mO" hidden></p>
+    <label class="lb" for="mailO">Tu correo</label><input class="in" id="mailO" type="email" inputmode="email" autocomplete="email">
+    <button class="go" id="goO">Mandarme mi PIN</button><p class="msg" id="mO" hidden></p>
+    <p class="sub" style="margin:.8rem 0 0;font-size:.85rem">A ese correo te llegará también el reporte mensual de cuentas; puedes darte de baja cuando quieras. <a href="privacidad.html">Aviso de privacidad</a>.</p>
     <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl aEntrar">Ya tengo PIN</button></p>
   </form>
   <form class="caja" id="fP" novalidate hidden>
@@ -93,8 +94,8 @@
   const deptos = sel => { opciones(sel, (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
     return fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); return {}; } if (j.ok) guarda("valetta.vecinos", j); if (j.ok && j.deptos.length) opciones(sel, j.deptos); return j; }); };
   const $m = v => "$" + Math.round(Math.abs(v)).toLocaleString("es-MX");
-  const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", liga: "La liga caducó o ya se usó. Pide otra con «Olvidé mi PIN».", nocoincide: "Ese correo no es el registrado para ese departamento. Pide tu PIN a la Administración.",
-    sinpin: "Ese departamento todavía no tiene PIN: pídelo a la Administración.", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
+  const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", yaregistrado: "Ese departamento ya registró otro correo. Usa ese correo o escribe a la Administración.", liga: "La liga caducó o ya se usó. Pide tu PIN por correo otra vez.",
+    sinpin: "Ese departamento todavía no tiene PIN: avisa a la Administración.", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
   let sesion = null; try { sesion = JSON.parse(localStorage.getItem("valetta.cuenta") || "null"); } catch (e) {}
   const FORMAS = ["fE", "fO", "fP", "listo"], ver = id => { FORMAS.forEach(f => { $(f).hidden = f !== id; }); $("cta").hidden = true; };
   const q = new URLSearchParams(location.search), liga = q.get("crear") ? { depto: q.get("d") || "", x: q.get("x") || "", t: q.get("t") || "" } : null;
@@ -118,13 +119,13 @@
   }
   $("fE").onsubmit = e => { e.preventDefault(); if (!$("dep").value) return msg("mE", false, "Elige tu departamento."); entrar($("dep").value, $("pin").value.trim()); };
   $("fO").onsubmit = async e => { e.preventDefault();
-    const d = { accion: "olvide", depto: $("depO").value, correo: $("mailO").value.trim() };
+    const d = { accion: "registro", depto: $("depO").value, correo: $("mailO").value.trim() };
     if (!d.depto) return msg("mO", false, "Elige tu departamento.");
     const b = $("goO"); b.disabled = true;
     const j = await post(d).catch(() => ({ error: "conexión" }));
     b.disabled = false;
     if (esViejo(j) || j.error === "accion") return avisarViejo();
-    if (j.ok) return listo("📬", "Revisa tu correo", "Mandamos a <b>" + esc(d.correo) + "</b> la liga para poner un PIN nuevo. Sirve 48 horas; si no la ves, busca en correo no deseado.");
+    if (j.ok) { listo("📬", "Revisa tu correo", "Mandamos tu PIN a <b>" + esc(d.correo) + "</b>. Si no lo ves, busca en correo no deseado.<br><br><button type='button' class='enl' id='aYa'>Ya lo tengo: entrar</button>"); $("aYa").onclick = () => { ver("fE"); $("dep").value = d.depto; $("pin").focus(); }; return; }
     msg("mO", false, ERRC[j.error] || "No se pudo (" + j.error + ").");
   };
   $("fP").onsubmit = async e => { e.preventDefault();

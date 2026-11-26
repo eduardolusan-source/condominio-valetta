@@ -200,10 +200,11 @@ Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión**. No pide perm
 - Ya nadie crea un PIN con la clave de residentes. Ejecutar → **asignarPines** da un PIN al azar a cada depto que
   no tenga y lo anota en **PIN (privado)**, columna **PIN para entregar**. La Administración lo comparte a cada
   propietario. No toca a los deptos que ya tienen PIN.
-- La primera vez, el propietario entra con su depto y su PIN y la página le pide **registrar su correo**: queda
-  en la columna Correo y en **Correos** (reporte del día 10).
-- **Olvidé mi PIN**: llega una liga personal al correo registrado (caduca en 48 h, sirve una vez) para poner uno
-  nuevo; la columna «PIN para entregar» pasa a «(lo cambió el propietario)». Sin correo registrado, la
-  Administración le dicta el PIN de la hoja.
+- El propietario toca **Recíbelo por correo**, escribe depto y correo y ahí le llega su PIN, con una liga para
+  cambiarlo si quiere (caduca en 48 h, sirve una vez). El **primer correo** que se registra en un depto se queda
+  con él: queda en la columna Correo y en **Correos** (reporte del día 10). Otro correo distinto ya no recibe nada.
+- Cada registro le llega como aviso a la Administración (depto y correo). Si el correo no es del propietario:
+  borra el renglón de ese depto y ejecuta **asignarPines**.
+- **Olvidé mi PIN**: el mismo formulario; si ya lo cambió por uno propio, le llega solo la liga para poner otro.
 - Reponer un PIN o corregir un correo mal escrito: borra el renglón (o la celda del correo) de ese depto en
   **PIN (privado)**; si borraste el renglón, vuelve a ejecutar **asignarPines**.
