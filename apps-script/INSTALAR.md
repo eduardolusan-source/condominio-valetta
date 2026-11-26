@@ -194,3 +194,19 @@ Para activarlo en el script publicado:
 Mientras el script publicado sea el anterior, la página toma el desglose de
 la copia de `js/data.js` (enero a octubre de 2026); en cuanto el script nuevo
 responde (manda `desgloses: 1`), manda la hoja.
+
+### «Mi cuenta»: registro con correo verificado (26 de noviembre de 2026)
+Solo cambia `Vecinos.gs`: pégalo y publica con **Nueva versión**. No pide permisos nuevos.
+- Ya nadie crea un PIN con la clave de residentes. En `micuenta.html` el propietario se **registra** con
+  departamento, nombre y correo; queda en la pestaña **Registro (privado)** como «Por confirmar».
+- A la Administración le llega un correo con **✅ Sí es el propietario** y **❌ No lo conozco** (ligas firmadas que
+  abren `casa-admin.html`). Al aprobar, el correo queda ligado al depto en **PIN (privado)**, se agrega a
+  **Correos** (reporte del día 10) y al propietario le llega una liga personal para crear su PIN: caduca en 48 h
+  y sirve una sola vez. Si la Administración se equivoca, toca el otro botón.
+- **Olvidé mi PIN**: con el correo ya aprobado, la liga sale sola; la Administración no hace nada.
+- Cambio de correo o de dueño: se registra de nuevo; el aviso a la Administración advierte que ya había otro
+  correo, y al aprobar el anterior pierde el acceso (y se le avisa).
+- Aprobar de antemano: escribe depto y correo en **PIN (privado)** (columna del PIN vacía). Ese depto pide su
+  liga con «Olvidé mi PIN» o «Regístrate» y le llega sin esperar el visto bueno.
+- Los PIN creados antes **sin correo** dejan de servir: ese depto se registra de nuevo. Los que sí tienen correo
+  siguen funcionando.

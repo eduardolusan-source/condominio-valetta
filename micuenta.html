@@ -44,18 +44,32 @@
     <label class="lb" for="pin">Tu PIN</label><input class="in" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" style="font-size:1.4rem;letter-spacing:.3em">
     <label style="display:flex;gap:.5rem;align-items:center;margin-top:.8rem"><input type="checkbox" id="rec" checked style="width:22px;height:22px"> Recordar en este teléfono</label>
     <button class="go" id="goE">Ver mi cuenta</button><p class="msg" id="mE" hidden></p>
-    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aCrear">¿Primera vez? <b>Crea tu PIN</b></button></p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aCrear">¿Primera vez? <b>Regístrate</b></button> · <button type="button" class="enl" id="aOlvide">Olvidé mi PIN</button></p>
   </form>
   <form class="caja" id="fC" novalidate hidden>
-    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Crea tu PIN</h2><p class="sub" style="margin:0">Una sola vez por departamento. Solo tú lo sabrás.</p>
+    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Regístrate</h2><p class="sub" style="margin:0">La Administración confirma que eres del departamento y te llega por correo la liga para crear tu PIN.</p>
     <label class="lb" for="depC">Departamento</label><select class="in" id="depC"></select>
-    <label class="lb" for="cla">Clave de residentes <small style="font-weight:400;color:var(--muted)">(la misma de Finanzas)</small></label><input class="in" id="cla" type="password" autocomplete="off">
+    <label class="lb" for="nomC">Tu nombre</label><input class="in" id="nomC" type="text" maxlength="80" autocomplete="name">
+    <label class="lb" for="mailC">Tu correo</label><input class="in" id="mailC" type="email" inputmode="email" autocomplete="email">
+    <input type="text" id="webC" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
+    <button class="go" id="goC">Enviar mi registro</button><p class="msg" id="mC" hidden></p>
+    <p class="sub" style="margin:.8rem 0 0;font-size:.85rem">A ese correo te llegará también el reporte mensual de cuentas; puedes darte de baja cuando quieras. <a href="privacidad.html">Aviso de privacidad</a>.</p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl aEntrar">Ya tengo PIN</button></p>
+  </form>
+  <form class="caja" id="fO" novalidate hidden>
+    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Olvidé mi PIN</h2><p class="sub" style="margin:0">Te mandamos una liga al correo con el que te registraste para que pongas uno nuevo.</p>
+    <label class="lb" for="depO">Departamento</label><select class="in" id="depO"></select>
+    <label class="lb" for="mailO">Tu correo registrado</label><input class="in" id="mailO" type="email" inputmode="email" autocomplete="email">
+    <button class="go" id="goO">Mandarme la liga</button><p class="msg" id="mO" hidden></p>
+    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl aEntrar">Ya tengo PIN</button></p>
+  </form>
+  <form class="caja" id="fP" novalidate hidden>
+    <h2 style="font-size:1.15rem;margin:0 0 .2rem">Elige tu PIN · depto <span id="depP"></span></h2><p class="sub" style="margin:0">Solo tú lo sabrás. Con él entras a ver tu estado de cuenta.</p>
     <div class="dos2"><div><label class="lb" for="p1">PIN (4 a 6 números)</label><input class="in" id="p1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div>
     <div><label class="lb" for="p2">Repítelo</label><input class="in" id="p2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></div></div>
-    <label class="lb" for="mailC">Correo <small style="font-weight:400;color:var(--muted)">(opcional, para avisarte)</small></label><input class="in" id="mailC" type="email" inputmode="email" autocomplete="email">
-    <button class="go" id="goC">Crear mi PIN y entrar</button><p class="msg" id="mC" hidden></p>
-    <p style="margin:1rem 0 0;text-align:center"><button type="button" class="enl" id="aEntrar">Ya tengo PIN</button></p>
+    <button class="go" id="goP">Guardar mi PIN y entrar</button><p class="msg" id="mP" hidden></p>
   </form>
+  <div class="caja" id="listo" hidden style="text-align:center"></div>
   <div id="cta" hidden></div>
 </main>
 <footer class="site-footer">
@@ -74,7 +88,7 @@
   const msg = (id, ok, t) => { const m = $(id); m.hidden = false; m.className = "msg " + (ok ? "ok" : "mal"); m.textContent = t; };
   let claveG = ""; try { claveG = localStorage.getItem("valetta.vecino") || ""; } catch (e) {}
   const recordar = c => { try { localStorage.setItem("valetta.vecino", c); } catch (e) {} };
-  const ERR = { clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", nombre: "Escribe tu nombre para que la Administración sepa quién la pide.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
+  const ERR = { nombre: "Escribe tu nombre completo para que la Administración te reconozca.", clave: "La clave no es la de residentes (la misma de Finanzas).", departamento: "Elige tu departamento de la lista.", correo: "Revisa tu correo.", ocupado: "Ese día ya está apartado.", nombre: "Escribe tu nombre para que la Administración sepa quién la pide.", dia: "Elige un día a partir de mañana.", lejos: "Se aparta hasta con 90 días de anticipación.", tope: "Tu departamento ya tiene 2 fechas apartadas.", espera: "Demasiados intentos; prueba en un rato.", "no encontrado": "No encontramos ese folio con ese correo." };
   const VIEJO = '<div class="aviso-v">⚙️ El sitio todavía está conectado a la versión anterior del servicio. La administración del sitio debe publicar la nueva: <b>Implementar → Administrar implementaciones → ✏️ → Nueva versión</b>.</div>';
   const esViejo = j => !!j && j.servicio === "valetta-finanzas";
   const avisarViejo = () => { const m = document.querySelector("main.pg"); if (m && !m.querySelector(".aviso-v")) m.querySelector("h1").insertAdjacentHTML("afterend", VIEJO); };
@@ -86,33 +100,53 @@
   const deptos = sel => { opciones(sel, (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
     return fetch(URL_ + "?accion=vecinos&t=" + Date.now()).then(r => r.json()).then(j => { if (esViejo(j)) { avisarViejo(); return {}; } if (j.ok) guarda("valetta.vecinos", j); if (j.ok && j.deptos.length) opciones(sel, j.deptos); return j; }); };
   const $m = v => "$" + Math.round(Math.abs(v)).toLocaleString("es-MX");
-  const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", existe: "Ese departamento ya tiene PIN. Si no lo recuerdas, pide a la Administración que lo reponga.",
-    sinpin: "Ese departamento todavía no tiene PIN: créalo abajo.", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
+  const ERRC = Object.assign({}, ERR, { pin: "El PIN son 4 a 6 números.", facil: "Ese PIN es muy fácil de adivinar; elige otro.", liga: "La liga caducó o ya se usó. Pide otra con «Olvidé mi PIN».", sinregistro: "Este departamento debe registrarse con su correo: toca «Regístrate».",
+    sinpin: "Ese departamento todavía no tiene PIN: toca «Regístrate».", pinmal: "PIN equivocado.", espera: "Demasiados intentos. Prueba en una hora o pide ayuda a la Administración." });
   let sesion = null; try { sesion = JSON.parse(localStorage.getItem("valetta.cuenta") || "null"); } catch (e) {}
-  opciones("depC", (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS);
-  if (sesion) { const c0 = lee("valetta.cuenta.datos"); if (c0 && c0.depto === sesion.depto) { pintar(c0); $("cta").insertAdjacentHTML("afterbegin", '<p class="act" id="act">Actualizando…</p>'); } entrar(sesion.depto, sesion.pin, true); }
-  deptos("dep").then(j => { if (j.deptos) opciones("depC", j.deptos); if (sesion) $("dep").value = sesion.depto; }).catch(() => {});
-  if (claveG) $("cla").value = claveG;
-  $("aCrear").onclick = () => { $("fE").hidden = true; $("fC").hidden = false; $("depC").value = $("dep").value; };
-  $("aEntrar").onclick = () => { $("fC").hidden = true; $("fE").hidden = false; };
+  const FORMAS = ["fE", "fC", "fO", "fP", "listo"], ver = id => { FORMAS.forEach(f => { $(f).hidden = f !== id; }); $("cta").hidden = true; };
+  const q = new URLSearchParams(location.search), liga = q.get("crear") ? { depto: q.get("d") || "", x: q.get("x") || "", t: q.get("t") || "" } : null;
+  ["depC", "depO"].forEach(x => opciones(x, (lee("valetta.vecinos") || {}).deptos || DEPTOS_FIJOS));
+  if (liga) { $("depP").textContent = liga.depto; ver("fP"); }
+  else if (sesion) { const c0 = lee("valetta.cuenta.datos"); if (c0 && c0.depto === sesion.depto) { pintar(c0); $("cta").insertAdjacentHTML("afterbegin", '<p class="act" id="act">Actualizando…</p>'); } entrar(sesion.depto, sesion.pin, true); }
+  deptos("dep").then(j => { if (j.deptos) ["depC", "depO"].forEach(x => opciones(x, j.deptos)); if (sesion) $("dep").value = sesion.depto; }).catch(() => {});
+  $("aCrear").onclick = () => { ver("fC"); $("depC").value = $("dep").value; };
+  $("aOlvide").onclick = () => { ver("fO"); $("depO").value = $("dep").value; };
+  document.querySelectorAll(".aEntrar").forEach(b => { b.onclick = () => ver("fE"); });
+  const listo = (ic, t, sub) => { $("listo").innerHTML = '<div style="font-size:3rem">' + ic + '</div><h2 style="font-size:1.3rem;margin:.3rem 0">' + esc(t) + '</h2><p class="sub" style="margin:0">' + sub + "</p>"; ver("listo"); };
+  const LIGA_OK = c => ["📬", "Revisa tu correo", "Mandamos a <b>" + esc(c) + "</b> la liga para poner tu PIN. Sirve 48 horas; si no la ves, busca en correo no deseado."];
+  const PEND_OK = c => ["⏳", "Registro enviado", "La Administración va a confirmar que eres del departamento. En cuanto lo haga, te llega a <b>" + esc(c) + "</b> la liga para crear tu PIN."];
   async function entrar(depto, pin, auto) {
     const j = await post({ accion: "cuenta", depto: depto, pin: pin }).catch(() => ({ error: "conexión" }));
     if (j.ok) { if ($("rec").checked || auto) { guarda("valetta.cuenta", { depto: depto, pin: pin }); guarda("valetta.cuenta.datos", j); } return pintar(j); }
-    if (auto) { if (j.error === "pinmal" || j.error === "sinpin") { try { localStorage.removeItem("valetta.cuenta"); localStorage.removeItem("valetta.cuenta.datos"); } catch (e) {} $("cta").hidden = true; $("fE").hidden = false; } else { const a = $("act"); if (a) a.textContent = "Sin conexión: es tu última consulta guardada."; } return; }
+    if (auto) { if (j.error === "pinmal" || j.error === "sinpin" || j.error === "sinregistro") { try { localStorage.removeItem("valetta.cuenta"); localStorage.removeItem("valetta.cuenta.datos"); } catch (e) {} $("cta").hidden = true; $("fE").hidden = false; } else { const a = $("act"); if (a) a.textContent = "Sin conexión: es tu última consulta guardada."; } return; }
     msg("mE", false, (ERRC[j.error] || "No se pudo (" + j.error + ").") + (j.quedan > 0 && j.quedan < 4 ? " Te quedan " + j.quedan + " intentos." : ""));
   }
   $("fE").onsubmit = e => { e.preventDefault(); if (!$("dep").value) return msg("mE", false, "Elige tu departamento."); entrar($("dep").value, $("pin").value.trim()); };
-  $("fC").onsubmit = async e => { e.preventDefault();
-    if ($("p1").value !== $("p2").value) return msg("mC", false, "Los dos PIN no coinciden.");
-    const b = $("goC"); b.disabled = true;
-    const j = await post({ accion: "pin", depto: $("depC").value, clave: $("cla").value, pin: $("p1").value.trim(), correo: $("mailC").value.trim() }).catch(() => ({ error: "conexión" }));
+  async function pedir(forma, boton, m, d) {
+    if (!d.depto) return msg(m, false, "Elige tu departamento.");
+    const b = $(boton); b.disabled = true;
+    const j = await post(Object.assign({ accion: "registro" }, d)).catch(() => ({ error: "conexión" }));
     b.disabled = false;
-    if (!j.ok) return msg("mC", false, ERRC[j.error] || "No se pudo (" + j.error + ").");
-    recordar($("cla").value); guarda("valetta.cuenta", { depto: $("depC").value, pin: $("p1").value.trim() }); guarda("valetta.cuenta.datos", j);
+    if (esViejo(j) || j.error === "accion") return avisarViejo();
+    if (j.ok) return listo.apply(null, (j.estado === "liga" ? LIGA_OK : PEND_OK)(d.correo));
+    if (forma === "fO" && j.error === "nombre") { ver("fC"); $("depC").value = d.depto; $("mailC").value = d.correo; return msg("mC", false, "Ese correo no es el registrado para ese departamento. Si es tu correo nuevo, regístrate con él."); }
+    msg(m, false, ERRC[j.error] || "No se pudo (" + j.error + ").");
+  }
+  $("fC").onsubmit = e => { e.preventDefault(); pedir("fC", "goC", "mC", { depto: $("depC").value, nombre: $("nomC").value.trim(), correo: $("mailC").value.trim(), web: $("webC").value }); };
+  $("fO").onsubmit = e => { e.preventDefault(); pedir("fO", "goO", "mO", { depto: $("depO").value, correo: $("mailO").value.trim() }); };
+  $("fP").onsubmit = async e => { e.preventDefault();
+    const pin = $("p1").value.trim();
+    if (pin !== $("p2").value.trim()) return msg("mP", false, "Los dos PIN no coinciden.");
+    const b = $("goP"); b.disabled = true;
+    const j = await post({ accion: "pin", depto: liga.depto, x: liga.x, t: liga.t, pin: pin }).catch(() => ({ error: "conexión" }));
+    b.disabled = false;
+    if (!j.ok) return msg("mP", false, ERRC[j.error] || "No se pudo (" + j.error + ").");
+    guarda("valetta.cuenta", { depto: j.depto, pin: pin }); guarda("valetta.cuenta.datos", j);
+    try { history.replaceState(null, "", location.pathname); } catch (e2) {}
     pintar(j); };
 
   function pintar(c) {
-    $("fE").hidden = true; $("fC").hidden = true; const box = $("cta"); box.hidden = false;
+    ver(""); const box = $("cta"); box.hidden = false;
     const ms = c.meses.slice().reverse(), ok_ = m => m.estado === "pagado" || m.estado === "cubierto", pag = c.meses.filter(ok_).length, atr = c.meses.filter(m => !ok_(m) && !m.enCurso).length;
     const cur = c.meses.find(m => m.enCurso), soloEste = c.debe > 0 && !atr && cur && !ok_(cur);
     const wa = "https://wa.me/" + c.contacto.tel + "?text=" + encodeURIComponent("Hola, soy del depto " + c.depto + ". Revisé «Mi cuenta» en el sitio y tengo una duda: ");
