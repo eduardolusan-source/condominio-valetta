@@ -24,6 +24,7 @@ const ENC_RCC_V = ["Folio", "Solicitada el", "Día", "Departamento", "Correo", "
 const EST_RCC_V = ["Por confirmar", "Confirmada", "Rechazada", "Cancelada"];
 const ZONA_V = "America/Mexico_City";
 const REMITENTE_V = "La Valetta · Administración";
+const RESPONDER_V = "lavalettaa@gmail.com";   // los correos salen de la cuenta dueña del script, pero las respuestas llegan a la Administración
 
 /* ------------------------------- rutas ------------------------------- */
 function rutaVecinosGet_(p) {
@@ -105,14 +106,14 @@ function registrarCorreoV_(d) {
   const i = fs.findIndex(f => String(f[2]).trim().toLowerCase() === correo);
   if (baja) {
     if (i >= 0) h.getRange(i + 2, 4).setValue("no");
-    MailApp.sendEmail(correo, "Ya no recibirás el reporte de La Valetta", "Listo: dejaste de recibir el reporte mensual de La Valetta.\n\nSi fue un error, vuelve a registrarte en el sitio.", { name: REMITENTE_V });
+    MailApp.sendEmail(correo, "Ya no recibirás el reporte de La Valetta", "Listo: dejaste de recibir el reporte mensual de La Valetta.\n\nSi fue un error, vuelve a registrarte en el sitio.", { name: REMITENTE_V, replyTo: RESPONDER_V });
     return { ok: true, baja: true };
   }
   if (!claveOkV_(d.clave)) return { ok: false, error: "clave" };
   if (deptosV_().length && deptosV_().map(x => x.toLowerCase()).indexOf(depto.toLowerCase()) < 0) return { ok: false, error: "departamento" };
   if (i >= 0) h.getRange(i + 2, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
   else h.getRange(h.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
-  MailApp.sendEmail(correo, "Ya recibirás el reporte de La Valetta", "Hola:\n\nCada mes, alrededor del día 10, te llegará el reporte de cuentas del condominio: saldo, ingresos, gastos y cobranza, siempre en cifras agregadas.\n\nPara que no se vaya a correo no deseado, agrega esta dirección a tus contactos; si un día 10 no lo ves, búscalo en la carpeta de correo no deseado y márcalo como «no es correo no deseado».\n\nSi no fuiste tú, date de baja en la página «Recibe el reporte» del sitio" + (sitioV_() ? ": " + sitioV_() + "/correo.html" : "") + ".", { name: REMITENTE_V });
+  MailApp.sendEmail(correo, "Ya recibirás el reporte de La Valetta", "Hola:\n\nCada mes, alrededor del día 10, te llegará el reporte de cuentas del condominio: saldo, ingresos, gastos y cobranza, siempre en cifras agregadas.\n\nPara que no se vaya a correo no deseado, agrega esta dirección a tus contactos; si un día 10 no lo ves, búscalo en la carpeta de correo no deseado y márcalo como «no es correo no deseado».\n\nSi no fuiste tú, date de baja en la página «Recibe el reporte» del sitio" + (sitioV_() ? ": " + sitioV_() + "/correo.html" : "") + ".", { name: REMITENTE_V, replyTo: RESPONDER_V });
   return { ok: true };
 }
 
@@ -158,9 +159,9 @@ function reservarCasaV_(d) {
   const fechaL = Utilities.formatDate(new Date(dia + "T12:00:00"), ZONA_V, "dd/MM/yyyy"), otras = fs.filter(f => activaV_(f) && diaV_(f[2]) >= hoy).length;
   admonV_().forEach(a => MailApp.sendEmail(a, "🏠 Casa club: depto " + depto + " pide el " + fechaL + " (" + folio + ")",
     nombre + " (depto " + depto + ") pide la casa club el " + dia + ". Confirmar: " + liga("Confirmada") + "  ·  Rechazar: " + liga("Rechazada"),
-    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Casa club · ' + folio + '</p><h2 style="margin:6px 0 4px">Depto ' + depto + " pide el " + fechaL + '</h2><p style="color:#52514e;margin:0 0 14px"><b>' + nombre + "</b> · " + correo + "<br>10:00 a 23:59 h · garantía $3,000</p>" +
+    { name: REMITENTE_V, replyTo: RESPONDER_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Casa club · ' + folio + '</p><h2 style="margin:6px 0 4px">Depto ' + depto + " pide el " + fechaL + '</h2><p style="color:#52514e;margin:0 0 14px"><b>' + nombre + "</b> · " + correo + "<br>10:00 a 23:59 h · garantía $3,000</p>" +
       boton("Confirmada", "✅ Confirmar", "#2e7d32") + boton("Rechazada", "❌ Rechazar", "#b3261e") + '<p style="color:#898781;font-size:13px;margin-top:16px">Un toque basta: se anota en la hoja y al residente le llega el aviso. ' + (otras ? "Hay " + otras + " fecha(s) más apartadas en la pestaña «" + HOJA_RCC_V + "»." : "") + "</p></div>" }));
-  MailApp.sendEmail(correo, "Recibimos tu solicitud de casa club " + folio, "Día: " + dia + " (10:00 a 23:59 h)\nEstatus: por confirmar.\n\nLa Administración te confirmará por correo. Garantía: $3,000; se devuelven $2,000 si todo está en orden.\nConsulta tu folio en la página «Casa club» del sitio.", { name: REMITENTE_V });
+  MailApp.sendEmail(correo, "Recibimos tu solicitud de casa club " + folio, "Día: " + dia + " (10:00 a 23:59 h)\nEstatus: por confirmar.\n\nLa Administración te confirmará por correo. Garantía: $3,000; se devuelven $2,000 si todo está en orden.\nConsulta tu folio en la página «Casa club» del sitio.", { name: REMITENTE_V, replyTo: RESPONDER_V });
   return { ok: true, folio: folio };
 }
 function cancelarCasaV_(d) {
@@ -168,7 +169,7 @@ function cancelarCasaV_(d) {
   const h = hoja_().getSheetByName(HOJA_RCC_V), fs = filasV_(HOJA_RCC_V, ENC_RCC_V.length), i = fs.findIndex(f => String(f[0]).toUpperCase() === folio && String(f[4]).toLowerCase() === correo);
   if (!h || i < 0) return { ok: false, error: "no encontrado" };
   h.getRange(i + 2, 6).setValue("Cancelada"); olvidarCasa_();
-  admonV_().forEach(a => MailApp.sendEmail(a, "Casa club cancelada " + folio, "Depto " + fs[i][3] + " canceló la casa club del " + diaV_(fs[i][2]) + ". La fecha quedó libre.", { name: REMITENTE_V }));
+  admonV_().forEach(a => MailApp.sendEmail(a, "Casa club cancelada " + folio, "Depto " + fs[i][3] + " canceló la casa club del " + diaV_(fs[i][2]) + ". La fecha quedó libre.", { name: REMITENTE_V, replyTo: RESPONDER_V }));
   return { ok: true };
 }
 /* Cada 30 minutos: si la Administración cambió el Estatus, avisa al residente (una sola vez por estatus). */
@@ -177,7 +178,7 @@ function avisosCasa() {
   filasV_(HOJA_RCC_V, ENC_RCC_V.length).forEach(f => {
     const folio = String(f[0]), est = String(f[5] || ""), k = "aviso_" + folio;
     if (!folio || !/confirmada|rechazada/i.test(est) || props.getProperty(k) === est || !correoOkV_(f[4])) return;
-    MailApp.sendEmail(String(f[4]), "Casa club " + folio + ": " + est.toLowerCase(), "Tu solicitud de la casa club para el " + diaV_(f[2]) + " quedó " + est.toLowerCase() + "." + (f[6] ? "\n\nNota de la Administración: " + f[6] : "") + (/confirmada/i.test(est) ? "\n\nRecuerda: garantía de $3,000 al apartar, checklist de entrada y salida y se devuelven $2,000 cinco días después si todo está en orden." : ""), { name: REMITENTE_V });
+    MailApp.sendEmail(String(f[4]), "Casa club " + folio + ": " + est.toLowerCase(), "Tu solicitud de la casa club para el " + diaV_(f[2]) + " quedó " + est.toLowerCase() + "." + (f[6] ? "\n\nNota de la Administración: " + f[6] : "") + (/confirmada/i.test(est) ? "\n\nRecuerda: garantía de $3,000 al apartar, checklist de entrada y salida y se devuelven $2,000 cinco días después si todo está en orden." : ""), { name: REMITENTE_V, replyTo: RESPONDER_V });
     props.setProperty(k, est);
   });
 }
@@ -209,7 +210,7 @@ function salud_() {
 }
 function revisar() {
   const s = salud_(); Logger.log(s.puntos.map(p => (p.nivel === "rojo" ? "🔴 " : p.nivel === "amarillo" ? "🟡 " : "ℹ️ ") + p.texto).join("\n"));
-  admonV_().forEach(a => MailApp.sendEmail(a, "Semáforo de la hoja · La Valetta", textoSalud_(s), { name: REMITENTE_V }));
+  admonV_().forEach(a => MailApp.sendEmail(a, "Semáforo de la hoja · La Valetta", textoSalud_(s), { name: REMITENTE_V, replyTo: RESPONDER_V }));
   return s;
 }
 function textoSalud_(s) { const p = s.puntos.filter(x => x.nivel !== "info"); return (p.length ? p.map(x => (x.nivel === "rojo" ? "🔴 " : "🟡 ") + x.texto).join("\n") : "🟢 Todo cuadra.") + "\n" + s.puntos.filter(x => x.nivel === "info").map(x => "ℹ️ " + x.texto).join("\n"); }
@@ -482,7 +483,7 @@ function bitacoraV_(mes, a, nota) { const h = hojaV_(HOJA_REP_V, ["Fecha", "Mes"
 function envioMensual() {
   const id = mesAnteriorV_(), props = PropertiesService.getScriptProperties(), k = datosReporte_(id), s = salud_();
   const kit = (k ? "📲 Texto para el grupo de WhatsApp (cópialo tal cual):\n\n" + textoWaV_(k) + "\n\n" : "⚠️ El mes " + id + " no tiene datos: no se envió el reporte. Captúralo y corre envioAhora desde el editor.\n\n") + "🚦 Semáforo de la hoja (privado):\n" + textoSalud_(s);
-  admonV_().forEach(a => MailApp.sendEmail(a, "Kit del mes · La Valetta · " + (k ? k.mes : id), kit, { name: REMITENTE_V }));
+  admonV_().forEach(a => MailApp.sendEmail(a, "Kit del mes · La Valetta · " + (k ? k.mes : id), kit, { name: REMITENTE_V, replyTo: RESPONDER_V }));
   if (!k) { bitacoraV_(id, "", "Sin datos: no se envió"); return; }
   if (props.getProperty("enviado_" + id)) { bitacoraV_(id, "", "Ya se había enviado"); return; }
   if (!/^s[ií]/i.test(String(cfgV_().reporte_envio || ""))) { bitacoraV_(id, "", "Envío a residentes en pausa (Config → reporte_envio)"); return; }
@@ -491,17 +492,17 @@ function envioMensual() {
      justo lo que Hotmail y Outlook mandan a no deseado. Solo si Google ya no deja mandar tantos hoy, sale en copia oculta. */
   const asunto = asuntoV_(k), plano = textoCorreoV_(k), cuerpo = htmlReporteV_(k), uno = MailApp.getRemainingDailyQuota() >= dest.length + 3;
   if (uno) {
-    dest.forEach(c => MailApp.sendEmail(c, asunto, plano, { name: REMITENTE_V, htmlBody: cuerpo }));
-    if (dest.indexOf("lavalettaa@gmail.com") < 0) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, htmlBody: cuerpo });   // la Administración ve lo mismo que los residentes
-  } else for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: cuerpo });
+    dest.forEach(c => MailApp.sendEmail(c, asunto, plano, { name: REMITENTE_V, replyTo: RESPONDER_V, htmlBody: cuerpo }));
+    if (dest.indexOf("lavalettaa@gmail.com") < 0) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, replyTo: RESPONDER_V, htmlBody: cuerpo });   // la Administración ve lo mismo que los residentes
+  } else for (let i = 0; i < dest.length; i += 40) MailApp.sendEmail("lavalettaa@gmail.com", asunto, plano, { name: REMITENTE_V, replyTo: RESPONDER_V, bcc: dest.slice(i, i + 40).join(","), htmlBody: cuerpo });
   props.setProperty("enviado_" + id, new Date().toISOString());
   bitacoraV_(id, dest.length + " correos", uno ? "Enviado uno por uno" : "Enviado en copia oculta (sin cuota para uno por uno)");
 }
 function envioAhora() { PropertiesService.getScriptProperties().deleteProperty("enviado_" + mesAnteriorV_()); envioMensual(); }
 function reportePrueba() {
   const k = datosReporte_(mesAnteriorV_()); const yo = Session.getEffectiveUser().getEmail();
-  if (!k) { MailApp.sendEmail(yo, "Prueba del reporte · La Valetta", "El mes " + mesAnteriorV_() + " todavía no tiene datos.", { name: REMITENTE_V }); return; }
-  MailApp.sendEmail(yo, "[Prueba] " + asuntoV_(k), textoCorreoV_(k), { name: REMITENTE_V, htmlBody: htmlReporteV_(k) });
+  if (!k) { MailApp.sendEmail(yo, "Prueba del reporte · La Valetta", "El mes " + mesAnteriorV_() + " todavía no tiene datos.", { name: REMITENTE_V, replyTo: RESPONDER_V }); return; }
+  MailApp.sendEmail(yo, "[Prueba] " + asuntoV_(k), textoCorreoV_(k), { name: REMITENTE_V, replyTo: RESPONDER_V, htmlBody: htmlReporteV_(k) });
 }
 
 /* ------------------------------- instalación ------------------------------- */
@@ -588,14 +589,14 @@ function registroV_(d) {
     h.getRange(fp.fila, 4).setValue(correo);
     const hc = hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V);   // también recibe el reporte del día 10 (puede darse de baja)
     if (!filasV_(HOJA_CORREOS_V, 4).some(x => String(x[2]).trim().toLowerCase() === correo)) hc.getRange(hc.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
-    admonV_().forEach(a => MailApp.sendEmail(a, "Mi cuenta: el depto " + depto + " registró su correo", "El depto " + depto + " registró el correo " + correo + " y ahí recibió su PIN.\n\nSi ese correo no es del propietario: en la pestaña «" + HOJA_PIN_V + "» borra el renglón de ese depto y ejecuta asignarPines (le da un PIN nuevo y deja libre el correo).", { name: REMITENTE_V }));
+    admonV_().forEach(a => MailApp.sendEmail(a, "Mi cuenta: el depto " + depto + " registró su correo", "El depto " + depto + " registró el correo " + correo + " y ahí recibió su PIN.\n\nSi ese correo no es del propietario: en la pestaña «" + HOJA_PIN_V + "» borra el renglón de ese depto y ejecuta asignarPines (le da un PIN nuevo y deja libre el correo).", { name: REMITENTE_V, replyTo: RESPONDER_V }));
   }
   const x = Date.now() + HORAS_LIGA_V * 3600000, entrar = baseV_() + "/micuenta.html";
   const liga = entrar + "?crear=1&d=" + encodeURIComponent(depto) + "&x=" + x + "&t=" + firmaPinV_(depto, correo, x, fp.hash);
   const pie = "La liga para cambiarlo sirve una sola vez y caduca en " + HORAS_LIGA_V + " horas. No reenvíes este correo.";
   MailApp.sendEmail(correo, "La Valetta: tu PIN del depto " + depto,
     (hayPin ? "Tu PIN del depto " + depto + " es: " + pin + "\n\nEntra a tu cuenta: " + entrar + "\n\nSi prefieres uno que solo tú sepas, cámbialo aquí: " + liga : "Abre esta liga para poner un PIN nuevo al depto " + depto + ": " + liga) + "\n\n" + pie + "\nCon este correo recibirás también el reporte mensual de cuentas.",
-    { name: REMITENTE_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Mi cuenta · depto ' + escV_(depto) + "</p>" +
+    { name: REMITENTE_V, replyTo: RESPONDER_V, htmlBody: '<div style="font-family:system-ui,sans-serif;max-width:520px"><p style="font-size:13px;color:#6f766a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0">Mi cuenta · depto ' + escV_(depto) + "</p>" +
       (hayPin ? '<h2 style="margin:6px 0 4px">Tu PIN</h2><p style="font-size:38px;font-weight:800;letter-spacing:.25em;margin:0 0 12px;color:#1c1c1a">' + pin + "</p>" + botonV_(entrar, "Entrar a mi cuenta", "#2e7d32") + botonV_(liga, "Cambiar mi PIN", "#6f766a")
         : '<h2 style="margin:6px 0 10px">Toca el botón para poner un PIN nuevo</h2>' + botonV_(liga, "🔐 Cambiar mi PIN", "#2e7d32")) +
       '<p style="color:#898781;font-size:13px;margin-top:16px">' + pie + "<br>Con este correo recibirás también el reporte mensual de cuentas.</p></div>" });
@@ -612,7 +613,7 @@ function crearPinV_(d) {
   if (pinFacilV_(pin)) return { ok: false, error: "facil" };
   hoja_().getSheetByName(HOJA_PIN_V).getRange(fp.fila, 2, 1, 4).setValues([[hashPinV_(depto, pin), new Date(), fp.correo, "(lo cambió el propietario)"]]);
   CacheService.getScriptCache().remove("pinmal_" + depto.toUpperCase());
-  MailApp.sendEmail(fp.correo, "Tu PIN de La Valetta cambió", "El PIN del depto " + depto + " se cambió hace un momento. Ya puedes entrar a «Mi cuenta»: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
+  MailApp.sendEmail(fp.correo, "Tu PIN de La Valetta cambió", "El PIN del depto " + depto + " se cambió hace un momento. Ya puedes entrar a «Mi cuenta»: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V, replyTo: RESPONDER_V });
   return Object.assign({ ok: true }, cuentaDeptoV_(depto));
 }
 /* Entrar. La primera vez (depto sin correo) pide registrar el correo: «pidecorreo» hasta que llegue uno válido. */
@@ -631,7 +632,7 @@ function miCuentaV_(d) {
     hoja_().getSheetByName(HOJA_PIN_V).getRange(f.fila, 4).setValue(correo);
     const hc = hojaV_(HOJA_CORREOS_V, ENC_CORREOS_V);   // también recibe el reporte del día 10 (puede darse de baja)
     if (!filasV_(HOJA_CORREOS_V, 4).some(x => String(x[2]).trim().toLowerCase() === correo)) hc.getRange(hc.getLastRow() + 1, 1, 1, 4).setValues([[new Date(), depto, correo, "sí"]]);
-    MailApp.sendEmail(correo, "Tu correo quedó registrado en La Valetta (depto " + depto + ")", "Listo: con este correo recibirás cada mes el reporte de cuentas del condominio y podrás cambiar tu PIN si lo olvidas («Olvidé mi PIN» en Mi cuenta).\n\nTu estado de cuenta: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V });
+    MailApp.sendEmail(correo, "Tu correo quedó registrado en La Valetta (depto " + depto + ")", "Listo: con este correo recibirás cada mes el reporte de cuentas del condominio y podrás cambiar tu PIN si lo olvidas («Olvidé mi PIN» en Mi cuenta).\n\nTu estado de cuenta: " + baseV_() + "/micuenta.html\n\nSi no fuiste tú, avisa a la Administración: lavalettaa@gmail.com.", { name: REMITENTE_V, replyTo: RESPONDER_V });
   }
   return Object.assign({ ok: true }, cuentaDeptoV_(depto));
 }
